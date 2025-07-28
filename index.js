@@ -682,41 +682,97 @@ const sanitize = (css) => {
     }
 };
 
-// 언어 감지 함수
+// 언어 감지 함수 (유니코드 범위 감지 - 최고 성능)
 function detectLanguage(text) {
     if (!text) return 'english';
     
-    // 이모지 패턴 (가장 먼저 체크)
-    const emojiRegex = /[\u{1f600}-\u{1f64f}\u{1f300}-\u{1f5ff}\u{1f680}-\u{1f6ff}\u{1f1e0}-\u{1f1ff}\u{2600}-\u{26ff}\u{2700}-\u{27bf}]/u;
-    if (emojiRegex.test(text)) {
-        return 'emoji';
+    // 문자열을 순회하면서 첫 번째 의미있는 문자의 언어를 감지
+    for (let i = 0; i < text.length; i++) {
+        const codePoint = text.codePointAt(i);
+        
+        // 이모지 범위들 (우선순위 높음)
+        if ((codePoint >= 0x1f600 && codePoint <= 0x1f64f) ||  // 감정 이모지
+            (codePoint >= 0x1f300 && codePoint <= 0x1f5ff) ||  // 기타 심볼 및 상형문자
+            (codePoint >= 0x1f680 && codePoint <= 0x1f6ff) ||  // 교통 및 지도 심볼
+            (codePoint >= 0x1f1e0 && codePoint <= 0x1f1ff) ||  // 국기 이모지
+            (codePoint >= 0x2600 && codePoint <= 0x26ff) ||    // 기타 심볼
+            (codePoint >= 0x2700 && codePoint <= 0x27bf) ||    // 딩뱃
+            (codePoint >= 0x1f900 && codePoint <= 0x1f9ff) ||  // 추가 이모지
+            (codePoint >= 0x1fa70 && codePoint <= 0x1faff)) {  // 확장 이모지
+            return 'emoji';
+        }
+        
+        // 한국어: 한글 자모 + 완성형 한글
+        if ((codePoint >= 0x1100 && codePoint <= 0x11ff) ||   // 한글 자모 (호환용)
+            (codePoint >= 0x3131 && codePoint <= 0x318e) ||   // 한글 호환 자모
+            (codePoint >= 0xac00 && codePoint <= 0xd7a3)) {   // 한글 음절 (완성형)
+            return 'korean';
+        }
+        
+        // 일본어: 히라가나 + 카타카나 + 일본어 한자 확장
+        if ((codePoint >= 0x3040 && codePoint <= 0x309f) ||   // 히라가나
+            (codePoint >= 0x30a0 && codePoint <= 0x30ff) ||   // 카타카나
+            (codePoint >= 0x31f0 && codePoint <= 0x31ff) ||   // 카타카나 음성 확장
+            (codePoint >= 0xff65 && codePoint <= 0xff9f)) {   // 반각 카타카나
+            return 'japanese';
+        }
+        
+        // 중국어: CJK 통합 한자 (간체 + 번체)
+        if ((codePoint >= 0x4e00 && codePoint <= 0x9fff) ||   // CJK 통합 한자
+            (codePoint >= 0x3400 && codePoint <= 0x4dbf) ||   // CJK 확장 A
+            (codePoint >= 0x20000 && codePoint <= 0x2a6df) || // CJK 확장 B
+            (codePoint >= 0x2a700 && codePoint <= 0x2b73f) || // CJK 확장 C
+            (codePoint >= 0x2b740 && codePoint <= 0x2b81f) || // CJK 확장 D
+            (codePoint >= 0x2b820 && codePoint <= 0x2ceaf) || // CJK 확장 E
+            (codePoint >= 0xf900 && codePoint <= 0xfaff)) {   // CJK 호환 한자
+            return 'chinese';
+        }
+        
+        // 영어: 기본 라틴 문자 + 확장 라틴
+        if ((codePoint >= 0x41 && codePoint <= 0x5a) ||       // 대문자 A-Z
+            (codePoint >= 0x61 && codePoint <= 0x7a) ||       // 소문자 a-z
+            (codePoint >= 0xc0 && codePoint <= 0xff) ||       // 라틴 확장 A (악센트 문자 등)
+            (codePoint >= 0x100 && codePoint <= 0x17f) ||     // 라틴 확장 B
+            (codePoint >= 0x180 && codePoint <= 0x24f)) {     // 라틴 확장 추가
+            return 'english';
+        }
+        
+        // 아랍어 (추가 지원)
+        if (codePoint >= 0x600 && codePoint <= 0x6ff) {
+            return 'arabic';
+        }
+        
+        // 러시아어/키릴 문자 (추가 지원)
+        if (codePoint >= 0x400 && codePoint <= 0x4ff) {
+            return 'cyrillic';
+        }
+        
+        // 태국어 (추가 지원)
+        if (codePoint >= 0xe00 && codePoint <= 0xe7f) {
+            return 'thai';
+        }
+        
+        // 힌디어/데바나가리 (추가 지원)
+        if (codePoint >= 0x900 && codePoint <= 0x97f) {
+            return 'hindi';
+        }
+        
+        // 서로게이트 페어 처리 (4바이트 유니코드 문자)
+        if (codePoint > 0xffff) {
+            i++; // 다음 문자는 low surrogate이므로 건너뛰기
+        }
+        
+        // 공백이나 구두점은 건너뛰고 계속 검사
+        if (codePoint <= 0x20 || 
+            (codePoint >= 0x21 && codePoint <= 0x2f) ||
+            (codePoint >= 0x3a && codePoint <= 0x40) ||
+            (codePoint >= 0x5b && codePoint <= 0x60) ||
+            (codePoint >= 0x7b && codePoint <= 0x7e)) {
+            continue;
+        }
     }
     
-    // 한국어 패턴 (한글 자모, 완성형 한글)
-    const koreanRegex = /[\u3131-\u3163\uac00-\ud7a3]/;
-    if (koreanRegex.test(text)) {
-        return 'korean';
-    }
-    
-    // 일본어 패턴 (히라가나, 카타카나, 한자 중 일본어에서 자주 사용되는 문자)
-    const japaneseRegex = /[\u3040-\u309f\u30a0-\u30ff]/;
-    if (japaneseRegex.test(text)) {
-        return 'japanese';
-    }
-    
-    // 중국어 패턴 (한자, 간체 및 번체)
-    const chineseRegex = /[\u4e00-\u9fff]/;
-    if (chineseRegex.test(text)) {
-        return 'chinese';
-    }
-    
-    // 영어 및 기타 라틴 문자
-    const englishRegex = /[a-zA-Z]/;
-    if (englishRegex.test(text)) {
-        return 'english';
-    }
-    
-    // 기본값은 영어
+    // 의미있는 문자를 찾지 못한 경우 기본값
     return 'english';
 }
 
@@ -811,7 +867,24 @@ function applyMultiLanguageFontsToMessages() {
                     return;
                 }
                 
-                const language = detectLanguage(word);
+                const detectedLanguage = detectLanguage(word);
+                
+                // 지원되지 않는 언어는 적절한 기본 언어로 매핑
+                let language = detectedLanguage;
+                if (!['english', 'korean', 'japanese', 'chinese', 'emoji'].includes(detectedLanguage)) {
+                    // 추가 언어들을 기본 언어로 매핑
+                    switch (detectedLanguage) {
+                        case 'arabic':
+                        case 'cyrillic':
+                        case 'thai':
+                        case 'hindi':
+                            language = 'english'; // 라틴 계열이 아닌 언어들도 영어 폰트 사용
+                            break;
+                        default:
+                            language = 'english';
+                    }
+                }
+                
                 const className = `font-manager-${language}`;
                 processedContent.push(`<span class="${className}">${word}</span>`);
             });
