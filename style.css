@@ -1,15 +1,15 @@
 /* Font-Manager 확장 스타일 - 폰트 관리 */
 
-/* 드롭다운과 버튼 행 */
-.font-selector-row {
+/* 프리셋 드롭다운과 버튼 행 */
+.preset-selector-row {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-bottom: 15px;
 }
 
-/* 폰트 드롭다운 */
-.font-dropdown {
+/* 프리셋 드롭다운 */
+.preset-dropdown {
     flex: 1;
     padding: 8px 12px;
     border: 1px solid var(--SmartThemeBorderColor);
@@ -21,14 +21,14 @@
     transition: all 0.2s ease;
 }
 
-.font-dropdown:focus {
+.preset-dropdown:focus {
     outline: none;
     border-color: var(--SmartThemeQuoteColor);
     box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
 }
 
-/* 플러스/삭제 버튼 */
-.add-font-btn, .delete-font-btn {
+/* 프리셋 관리 버튼들 */
+.preset-btn {
     padding: 8px 12px;
     background-color: var(--SmartThemeBlurTintColor);
     border: 1px solid var(--SmartThemeBorderColor);
@@ -43,10 +43,49 @@
     justify-content: center;
 }
 
-.add-font-btn:hover, .delete-font-btn:hover {
+.preset-btn:hover {
     background-color: var(--SmartThemeQuoteColor);
     color: var(--SmartThemeBodyColor);
     transform: scale(1.05);
+}
+
+/* UI 폰트 섹션 */
+.ui-font-section {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: var(--black30a);
+}
+
+.ui-font-section h3 {
+    margin: 0 0 10px 0;
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 1.1);
+}
+
+.ui-font-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.ui-font-dropdown {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black50a);
+    color: var(--SmartThemeBodyColor);
+    font-family: inherit;
+    font-size: calc(var(--mainFontSize) * 0.9);
+    transition: all 0.2s ease;
+}
+
+.ui-font-dropdown:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
 }
 
 /* 폰트 추가 영역 */
@@ -277,7 +316,7 @@
 
 /* 반응형 디자인 */
 @media (max-width: 600px) {
-    .font-selector-row {
+    .preset-selector-row {
         gap: 8px;
     }
     
@@ -290,10 +329,15 @@
     .font-preview {
         margin-left: 0;
     }
+    
+    .ui-font-selector {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }
 
 @media (max-width: 480px) {
-    .font-selector-row {
+    .preset-selector-row {
         gap: 6px;
         margin-bottom: 15px;
     }
