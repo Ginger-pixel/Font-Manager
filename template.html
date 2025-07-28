@@ -18,45 +18,6 @@
         </button>
     </div>
     
-    <!-- 테마 연동 섹션 -->
-    <div class="theme-binding-section" id="theme-binding-section">
-        <h3>테마 연동 설정</h3>
-        <p class="theme-binding-description">특정 테마가 선택되었을 때 자동으로 적용할 프리셋을 설정할 수 있습니다.</p>
-        
-        <div class="current-theme-info">
-            <label>현재 테마:</label>
-            <span id="current-theme-display">-</span>
-            <button id="refresh-theme-info-btn" class="theme-binding-btn" title="테마 정보 새로고침">
-                <i class="fa-solid fa-refresh"></i>
-            </button>
-        </div>
-        
-        <div class="theme-binding-controls">
-            <div class="theme-binding-row">
-                <input type="text" id="theme-name-input" class="theme-name-input" placeholder="테마 이름 입력 (예: Dark, Light)">
-                <select id="theme-preset-dropdown" class="theme-preset-dropdown">
-                    <option value="">프리셋 선택</option>
-                    <!-- 프리셋 옵션들이 여기에 표시됩니다 -->
-                </select>
-                <button id="add-theme-binding-btn" class="theme-binding-btn" title="테마 연동 추가">
-                    <i class="fa-solid fa-plus"></i>
-                </button>
-            </div>
-        </div>
-        
-        <div class="theme-bindings-list" id="theme-bindings-list">
-            <!-- 등록된 테마 연동 목록이 여기에 표시됩니다 -->
-        </div>
-        
-        <div class="theme-binding-help">
-            <small>💡 팁: 테마를 변경하면 연결된 프리셋이 자동으로 적용됩니다.</small>
-            <br><br>
-            <button id="test-theme-detection-btn" class="theme-binding-btn" title="현재 테마 감지 및 연동 테스트">
-                🔍 테마 감지 테스트
-            </button>
-        </div>
-    </div>
-    
     <!-- UI 폰트 섹션 -->
     <div class="ui-font-section" id="ui-font-section">
         <h3>UI 폰트 설정</h3>
@@ -114,6 +75,23 @@
             <div class="default-button-row">
                 <button id="message-font-reset-btn" class="default-btn">기본값</button>
             </div>
+        </div>
+    </div>
+    
+    <!-- 테마 연동 섹션 -->
+    <div class="theme-linking-section" id="theme-linking-section">
+        <h3>테마 연동</h3>
+        <div class="theme-add-form">
+            <input type="text" id="theme-name-input" class="theme-name-input" placeholder="테마 이름 입력 (예: dark.css)">
+            <select id="theme-preset-dropdown" class="theme-preset-dropdown">
+                <!-- 프리셋 옵션들이 여기에 동적으로 삽입됩니다 -->
+            </select>
+            <button id="add-theme-rule-btn" class="add-theme-rule-btn" title="테마 연동 추가">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+        <div class="theme-rules-list" id="theme-rules-list">
+            <!-- 테마 연동 규칙들이 여기에 표시됩니다 -->
         </div>
     </div>
     
