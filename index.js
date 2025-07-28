@@ -993,6 +993,54 @@ function setupEventListeners(template) {
             deleteFont(template, fontId);
         }
     });
+    
+    // UI 폰트 기본값 버튼 이벤트
+    template.find('#ui-font-reset-btn').off('click').on('click', function() {
+        // 기본값으로 초기화
+        const defaultUIFontSize = 14;
+        const defaultUIFontWeight = 0;
+        
+        // 임시 값 업데이트
+        tempUiFontSize = defaultUIFontSize;
+        tempUiFontWeight = defaultUIFontWeight;
+        
+        // UI 업데이트
+        template.find('#ui-font-size-slider').val(defaultUIFontSize);
+        template.find('#ui-font-size-value').text(defaultUIFontSize + 'px');
+        template.find('#ui-font-weight-slider').val(defaultUIFontWeight);
+        template.find('#ui-font-weight-value').text(defaultUIFontWeight.toFixed(1) + 'px');
+        
+        // 실시간 적용
+        updateUIFont();
+    });
+    
+    // 메시지 폰트 기본값 버튼 이벤트
+    template.find('#message-font-reset-btn').off('click').on('click', function() {
+        // 기본값으로 초기화
+        const defaultChatFontSize = 14;
+        const defaultInputFontSize = 14;
+        const defaultChatFontWeight = 0;
+        const defaultChatLineHeight = 1.2;
+        
+        // 임시 값 업데이트
+        tempChatFontSize = defaultChatFontSize;
+        tempInputFontSize = defaultInputFontSize;
+        tempChatFontWeight = defaultChatFontWeight;
+        tempChatLineHeight = defaultChatLineHeight;
+        
+        // UI 업데이트
+        template.find('#chat-font-size-slider').val(defaultChatFontSize);
+        template.find('#chat-font-size-value').text(defaultChatFontSize + 'px');
+        template.find('#input-font-size-slider').val(defaultInputFontSize);
+        template.find('#input-font-size-value').text(defaultInputFontSize + 'px');
+        template.find('#chat-font-weight-slider').val(defaultChatFontWeight);
+        template.find('#chat-font-weight-value').text(defaultChatFontWeight.toFixed(1) + 'px');
+        template.find('#chat-line-height-slider').val(defaultChatLineHeight);
+        template.find('#chat-line-height-value').text(defaultChatLineHeight.toFixed(1) + 'rem');
+        
+        // 실시간 적용
+        updateUIFont();
+    });
 }
 
 // 현재 설정값들을 전역 설정에 저장 (팝업 저장 버튼용)
