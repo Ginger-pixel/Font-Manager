@@ -36,16 +36,22 @@ function generateId() {
 
 // ArrayBuffer를 Base64로 변환 (스택 오버플로우 방지)
 function arrayBufferToBase64(buffer) {
-    const bytes = new Uint8Array(buffer);
-    const chunkSize = 32768; // 32KB 청크로 처리
-    let binaryString = '';
-    
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.slice(i, i + chunkSize);
-        binaryString += String.fromCharCode.apply(null, chunk);
+    try {
+        const bytes = new Uint8Array(buffer);
+        const chunkSize = 8192; // 8KB 청크로 더 안전하게 처리
+        let binaryString = '';
+        
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+            const chunk = bytes.slice(i, i + chunkSize);
+            const chunkString = Array.from(chunk, byte => String.fromCharCode(byte)).join('');
+            binaryString += chunkString;
+        }
+        
+        return btoa(binaryString);
+    } catch (error) {
+        console.error('Base64 인코딩 실패:', error);
+        throw new Error('폰트 파일 인코딩에 실패했습니다.');
     }
-    
-    return btoa(binaryString);
 }
 
 // 프리셋 이름 설정 팝업 표시
@@ -257,8 +263,8 @@ function renderFontAddArea(template) {
         
         <div class="font-add-section">
             <h3>로컬 폰트 파일 불러오기</h3>
-            <input type="file" id="font-file-input" class="font-file-input" accept=".ttf">
-            <button id="select-font-file-btn" class="select-font-file-btn">폰트 선택 (TTF 파일만)</button>
+            <input type="file" id="font-file-input" class="font-file-input" accept=".ttf,.otf,.woff,.woff2">
+            <button id="select-font-file-btn" class="select-font-file-btn">폰트 파일 선택 (TTF, OTF, WOFF, WOFF2)</button>
         </div>
     `;
     
@@ -346,33 +352,38 @@ async function applyTempUIFont(fontName) {
     }
     
     const cssRules = `
-        body,
-        input,
-        select,
-        span,
-        code,
-        .list-group-item,
-        .ui-widget-content .ui-menu-item-wrapper,
-        textarea:not(#send_textarea) {
+        html body,
+        html body *,
+        html body input,
+        html body select,
+        html body span,
+        html body code,
+        html body .list-group-item,
+        html body .ui-widget-content .ui-menu-item-wrapper,
+        html body textarea:not(#send_textarea),
+        html body div,
+        html body p,
+        html body label,
+        html body button {
             font-family: '${fontName}', var(--ui-default-font), Sans-Serif !important;
             font-weight: normal !important;
-            line-height: 1.1rem;
-            -webkit-text-stroke: var(--ui-font-weight);
+            line-height: 1.1rem !important;
+            -webkit-text-stroke: var(--ui-font-weight) !important;
         }
-        *::before,
-        i {
-            font-family: '${fontName}', Sans-Serif, "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+        html body *::before,
+        html body i:not(.fa-solid):not(.fa-brands):not(.fa-regular) {
+            font-family: '${fontName}', Sans-Serif !important;
             filter: none !important;
             text-shadow: none !important;
         }
-        .drawer-content,
-        textarea,
-        .drawer-icon {
-            border: 0;
+        html body .drawer-content,
+        html body textarea,
+        html body .drawer-icon {
+            border: 0 !important;
             color: var(--default-font-color) !important;
         }
-        .interactable,
-        .fa-solid {
+        html body .interactable,
+        html body .fa-solid {
             transition: all 0.3s !important;
         }
     `;
@@ -512,8 +523,17 @@ function setupEventListeners(template) {
         const file = event.target.files[0];
         if (!file) return;
         
-        if (!file.name.toLowerCase().endsWith('.ttf')) {
-            alert('TTF 파일만 선택할 수 있습니다.');
+        const validExtensions = ['.ttf', '.otf', '.woff', '.woff2'];
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        
+        if (!validExtensions.includes(fileExtension)) {
+            alert('지원되는 폰트 파일 형식: TTF, OTF, WOFF, WOFF2');
+            return;
+        }
+        
+        // 파일 크기 체크 (10MB 제한)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('폰트 파일 크기가 너무 큽니다. (최대 10MB)');
             return;
         }
         
@@ -642,17 +662,48 @@ function applyFontToSystem(font) {
             }, 100);
             
         } else if (font.type === 'file') {
-            // TTF 파일에서 폰트 적용
-            const fontData = `data:font/truetype;base64,${font.data}`;
-            const fontFace = new FontFace(font.name, `url(${fontData})`);
+            // TTF 파일에서 폰트 적용 - 더 안전한 방식
+            const formats = [
+                { mime: 'font/truetype', format: 'truetype' },
+                { mime: 'font/opentype', format: 'opentype' },
+                { mime: 'font/woff2', format: 'woff2' },
+                { mime: 'font/woff', format: 'woff' }
+            ];
             
-            fontFace.load().then(() => {
-                document.fonts.add(fontFace);
-                console.log(`TTF 폰트 '${font.name}'이 로드되었습니다.`);
-            }).catch(error => {
-                console.error(`폰트 '${font.name}' 로드 실패:`, error);
-                alert(`폰트 '${font.name}' 로드에 실패했습니다: ${error.message}`);
-            });
+            let formatIndex = 0;
+            
+            const tryNextFormat = () => {
+                if (formatIndex >= formats.length) {
+                    console.error(`폰트 '${font.name}' 로드 실패: 지원되는 폰트 포맷을 찾을 수 없습니다.`);
+                    alert(`폰트 '${font.name}' 로드에 실패했습니다.\n파일이 유효한 폰트 파일인지 확인해주세요.`);
+                    return;
+                }
+                
+                const formatInfo = formats[formatIndex];
+                const fontData = `data:${formatInfo.mime};base64,${font.data}`;
+                
+                try {
+                    const fontFace = new FontFace(font.name, `url(${fontData})`, {
+                        style: 'normal',
+                        weight: 'normal'
+                    });
+                    
+                    fontFace.load().then(() => {
+                        document.fonts.add(fontFace);
+                        console.log(`${formatInfo.format} 폰트 '${font.name}'이 로드되었습니다.`);
+                    }).catch(formatError => {
+                        console.warn(`${formatInfo.format} 포맷으로 로드 실패:`, formatError.message);
+                        formatIndex++;
+                        tryNextFormat();
+                    });
+                } catch (error) {
+                    console.warn(`포맷 ${formatInfo.format} 시도 중 오류:`, error);
+                    formatIndex++;
+                    tryNextFormat();
+                }
+            };
+            
+            tryNextFormat();
         }
         
     } catch (error) {
@@ -671,33 +722,38 @@ function applyPresetUIFont(preset) {
     }
     
     const cssRules = `
-        body,
-        input,
-        select,
-        span,
-        code,
-        .list-group-item,
-        .ui-widget-content .ui-menu-item-wrapper,
-        textarea:not(#send_textarea) {
+        html body,
+        html body *,
+        html body input,
+        html body select,
+        html body span,
+        html body code,
+        html body .list-group-item,
+        html body .ui-widget-content .ui-menu-item-wrapper,
+        html body textarea:not(#send_textarea),
+        html body div,
+        html body p,
+        html body label,
+        html body button {
             font-family: '${preset.uiFont}', var(--ui-default-font), Sans-Serif !important;
             font-weight: normal !important;
-            line-height: 1.1rem;
-            -webkit-text-stroke: var(--ui-font-weight);
+            line-height: 1.1rem !important;
+            -webkit-text-stroke: var(--ui-font-weight) !important;
         }
-        *::before,
-        i {
-            font-family: '${preset.uiFont}', Sans-Serif, "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+        html body *::before,
+        html body i:not(.fa-solid):not(.fa-brands):not(.fa-regular) {
+            font-family: '${preset.uiFont}', Sans-Serif !important;
             filter: none !important;
             text-shadow: none !important;
         }
-        .drawer-content,
-        textarea,
-        .drawer-icon {
-            border: 0;
+        html body .drawer-content,
+        html body textarea,
+        html body .drawer-icon {
+            border: 0 !important;
             color: var(--default-font-color) !important;
         }
-        .interactable,
-        .fa-solid {
+        html body .interactable,
+        html body .fa-solid {
             transition: all 0.3s !important;
         }
     `;
