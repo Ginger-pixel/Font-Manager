@@ -140,7 +140,6 @@ async function showFontNamePopup(fontData) {
         
         // 폰트 추가
         settings.fonts.push(newFont);
-        console.log('[Font-Manager] 새 폰트 추가됨:', newFont);
         
         // 폰트 CSS 업데이트
         updateUIFont();
@@ -325,7 +324,6 @@ function extractFontFamilyFromCSS(css) {
         const fontFaceMatch = css.match(/@font-face\s*{[^}]*font-family\s*:\s*['"]*([^'";]+)['"]*[^}]*}/i);
         if (fontFaceMatch && fontFaceMatch[1]) {
             const fontFamily = fontFaceMatch[1].trim();
-            console.log('[Font-Manager] CSS에서 추출된 font-family:', fontFamily);
             return fontFamily;
         }
     } catch (error) {
@@ -334,69 +332,22 @@ function extractFontFamilyFromCSS(css) {
     return null;
 }
 
-// 폰트 로드 상태 확인
-function checkFontLoad(fontFamily) {
-    console.log(`[Font-Manager] 폰트 로드 상태 확인: ${fontFamily}`);
-    
-    if (!document.fonts) {
-        console.warn('[Font-Manager] document.fonts API를 지원하지 않는 브라우저');
-        return;
-    }
-    
-    // 폰트 로드 확인
-    document.fonts.ready.then(() => {
-        const fontFace = Array.from(document.fonts).find(font => 
-            font.family === fontFamily || font.family === `"${fontFamily}"` || font.family === `'${fontFamily}'`
-        );
-        
-        if (fontFace) {
-            console.log(`[Font-Manager] ✅ 폰트 발견: ${fontFace.family}, 상태: ${fontFace.status}`);
-            
-            if (fontFace.status === 'loaded') {
-                console.log(`[Font-Manager] ✅ 폰트 로드 완료: ${fontFamily}`);
-            } else if (fontFace.status === 'loading') {
-                console.log(`[Font-Manager] ⏳ 폰트 로딩 중: ${fontFamily}`);
-                fontFace.loaded.then(() => {
-                    console.log(`[Font-Manager] ✅ 폰트 로드 완료: ${fontFamily}`);
-                }).catch(error => {
-                    console.error(`[Font-Manager] ❌ 폰트 로드 실패: ${fontFamily}`, error);
-                });
-            } else if (fontFace.status === 'unloaded') {
-                console.log(`[Font-Manager] ⏳ 폰트 아직 로드되지 않음: ${fontFamily}`);
-                fontFace.load().then(() => {
-                    console.log(`[Font-Manager] ✅ 폰트 강제 로드 완료: ${fontFamily}`);
-                }).catch(error => {
-                    console.error(`[Font-Manager] ❌ 폰트 강제 로드 실패: ${fontFamily}`, error);
-                });
-            } else {
-                console.warn(`[Font-Manager] ❓ 폰트 상태 불명: ${fontFamily}, 상태: ${fontFace.status}`);
-            }
-        } else {
-            console.warn(`[Font-Manager] ❌ 폰트를 찾을 수 없음: ${fontFamily}`);
-            console.log('[Font-Manager] 사용 가능한 폰트들:', Array.from(document.fonts).map(f => f.family));
-        }
-    });
-}
-
 // CSS 검증 및 정리
 const sanitize = (css) => {
     if (!css) return '';
     try {
-        console.log('[Font-Manager] CSS sanitization 시작');
         const style = document.createElement('style');
         style.innerHTML = css;
         document.head.append(style);
         const sheet = style.sheet;
         
         if (!sheet) {
-            console.warn('[Font-Manager] CSS sheet이 null입니다. 원본 CSS 반환');
             style.remove();
             return css;
         }
         
         const rules = Array.from(sheet.cssRules).map(it => (it.cssText) ?? '').join('\n');
         style.remove();
-        console.log('[Font-Manager] CSS sanitization 성공');
         return rules;
     } catch (error) {
         console.warn('[Font-Manager] CSS sanitization 실패:', error);
@@ -406,14 +357,10 @@ const sanitize = (css) => {
 
 // UI 폰트 업데이트
 function updateUIFont() {
-    console.log('[Font-Manager] updateUIFont() 호출됨');
-    
     if (!fontStyle) {
         fontStyle = document.createElement('style');
         fontStyle.id = 'font-manager--ui-fonts';
-        // CSS 우선순위를 위해 head의 맨 마지막에 추가
         document.head.appendChild(fontStyle);
-        console.log('[Font-Manager] 새 스타일 태그 생성:', fontStyle);
     }
     
     const fontCss = [];
@@ -421,20 +368,15 @@ function updateUIFont() {
     
     // 모든 폰트 CSS 적용
     const fonts = settings?.fonts || [];
-    console.log('[Font-Manager] 로드된 폰트 목록:', fonts);
     
     fonts.forEach(font => {
         if (font.type === 'source') {
-            console.log(`[Font-Manager] 폰트 CSS 추가: ${font.name}`);
             fontCss.push(`/* FONT: ${font.name} */\n${font.data}`);
         }
     });
     
     // 현재 UI 폰트 적용
     const currentFontName = tempUiFont || getCurrentPresetUIFont();
-    console.log('[Font-Manager] 현재 적용할 폰트:', currentFontName);
-    console.log('[Font-Manager] tempUiFont:', tempUiFont);
-    console.log('[Font-Manager] getCurrentPresetUIFont():', getCurrentPresetUIFont());
     
     // 실제 사용할 font-family 이름 찾기
     let actualFontFamily = currentFontName;
@@ -442,12 +384,10 @@ function updateUIFont() {
         const selectedFont = fonts.find(font => font.name === currentFontName);
         if (selectedFont && selectedFont.fontFamily) {
             actualFontFamily = selectedFont.fontFamily;
-            console.log(`[Font-Manager] 실제 font-family 사용: ${actualFontFamily} (원래: ${currentFontName})`);
         }
     }
     
     if (currentFontName && actualFontFamily) {
-        console.log(`[Font-Manager] UI 폰트 CSS 생성: ${actualFontFamily}`);
         uiFontCss.push(`
 /* UI FONT APPLICATION - Font Manager Override */
 html body,
@@ -497,18 +437,8 @@ html body .fa-solid {
         uiFontCss.join('\n\n')
     ].join('\n');
     
-    console.log('[Font-Manager] 생성된 CSS:', finalCss);
-    
     const sanitizedCss = sanitize(finalCss);
-    console.log('[Font-Manager] Sanitized CSS:', sanitizedCss);
-    
     fontStyle.innerHTML = sanitizedCss;
-    console.log('[Font-Manager] 스타일 태그에 CSS 적용 완료');
-    
-    // 폰트 로드 상태 확인
-    if (actualFontFamily && currentFontName) {
-        checkFontLoad(actualFontFamily);
-    }
 }
 
 // 현재 프리셋의 UI 폰트 가져오기
@@ -524,7 +454,6 @@ function getCurrentPresetUIFont() {
 
 // UI 폰트 임시 적용
 function applyTempUIFont(fontName) {
-    console.log('[Font-Manager] applyTempUIFont 호출:', fontName);
     tempUiFont = fontName;
     updateUIFont();
 }
