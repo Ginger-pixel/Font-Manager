@@ -126,12 +126,16 @@ async function showFontNamePopup(fontData) {
             continue;
         }
         
+        // CSS에서 실제 폰트 패밀리 이름 추출
+        const actualFontFamily = extractFontFamilyFromCSS(fontData.data);
+        
         // 새 폰트 생성
         const newFont = {
             id: generateId(),
             name: fontName,
             type: 'source',
-            data: fontData.data
+            data: fontData.data,
+            fontFamily: actualFontFamily || fontName // CSS에서 추출된 이름이 있으면 사용, 없으면 사용자 입력 이름
         };
         
         // 폰트 추가
@@ -314,6 +318,22 @@ function restoreOriginalUIStyles() {
     updateUIFont();
 }
 
+// CSS에서 font-family 이름 추출
+function extractFontFamilyFromCSS(css) {
+    try {
+        // @font-face 규칙에서 font-family 값 추출
+        const fontFaceMatch = css.match(/@font-face\s*{[^}]*font-family\s*:\s*['"]*([^'";]+)['"]*[^}]*}/i);
+        if (fontFaceMatch && fontFaceMatch[1]) {
+            const fontFamily = fontFaceMatch[1].trim();
+            console.log('[Font-Manager] CSS에서 추출된 font-family:', fontFamily);
+            return fontFamily;
+        }
+    } catch (error) {
+        console.warn('[Font-Manager] font-family 추출 실패:', error);
+    }
+    return null;
+}
+
 // CSS 검증 및 정리
 const sanitize = (css) => {
     if (!css) return '';
@@ -371,8 +391,18 @@ function updateUIFont() {
     console.log('[Font-Manager] tempUiFont:', tempUiFont);
     console.log('[Font-Manager] getCurrentPresetUIFont():', getCurrentPresetUIFont());
     
+    // 실제 사용할 font-family 이름 찾기
+    let actualFontFamily = currentFontName;
     if (currentFontName) {
-        console.log(`[Font-Manager] UI 폰트 CSS 생성: ${currentFontName}`);
+        const selectedFont = fonts.find(font => font.name === currentFontName);
+        if (selectedFont && selectedFont.fontFamily) {
+            actualFontFamily = selectedFont.fontFamily;
+            console.log(`[Font-Manager] 실제 font-family 사용: ${actualFontFamily} (원래: ${currentFontName})`);
+        }
+    }
+    
+    if (currentFontName && actualFontFamily) {
+        console.log(`[Font-Manager] UI 폰트 CSS 생성: ${actualFontFamily}`);
         uiFontCss.push(`
 /* UI FONT APPLICATION */
 body,
@@ -383,7 +413,7 @@ code,
 .list-group-item,
 .ui-widget-content .ui-menu-item-wrapper,
 textarea:not(#send_textarea) {
-  font-family: "${currentFontName}", var(--ui-default-font), Sans-Serif !important;
+  font-family: "${actualFontFamily}", var(--ui-default-font), Sans-Serif !important;
   font-weight: normal !important;
   line-height: 1.1rem;
   -webkit-text-stroke: var(--ui-font-weight);
@@ -391,7 +421,7 @@ textarea:not(#send_textarea) {
 
 *::before,
 i {
-  font-family: "${currentFontName}", Sans-Serif, "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+  font-family: "${actualFontFamily}", Sans-Serif, "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
   filter: none !important;
   text-shadow: none !important;
 }
