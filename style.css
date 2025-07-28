@@ -187,6 +187,66 @@
     border: 1px solid var(--SmartThemeBorderColor);
 }
 
+/* 색상 입력 컨테이너 */
+.color-input-container {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 5px;
+}
+
+.color-hash {
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 0.9);
+    font-weight: 600;
+}
+
+.color-input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 3px;
+    background-color: var(--black50a);
+    color: var(--SmartThemeBodyColor);
+    font-family: 'Courier New', monospace;
+    font-size: calc(var(--mainFontSize) * 0.85);
+    text-transform: uppercase;
+    max-width: 80px;
+    transition: all 0.2s ease;
+}
+
+.color-input:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
+}
+
+.color-input.invalid {
+    border-color: #ff4444;
+    background-color: rgba(255, 68, 68, 0.1);
+}
+
+.color-preview {
+    width: 30px;
+    height: 26px;
+    border: 2px solid var(--SmartThemeBorderColor);
+    border-radius: 3px;
+    background-color: transparent;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.color-preview:empty:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 20px;
+    height: 2px;
+    background-color: var(--SmartThemeBorderColor);
+}
+
 /* 폰트 추가 영역 */
 .font-add-area {
     border: 1px solid var(--SmartThemeBorderColor);
@@ -450,6 +510,16 @@
         min-width: 50px;
         font-size: calc(var(--mainFontSize) * 0.8);
     }
+    
+    .color-input {
+        max-width: 70px;
+        font-size: calc(var(--mainFontSize) * 0.8);
+    }
+    
+    .color-preview {
+        width: 25px;
+        height: 22px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -480,5 +550,20 @@
     
     .font-control-row span {
         min-width: 45px;
+    }
+    
+    .color-input-container {
+        gap: 3px;
+    }
+    
+    .color-input {
+        max-width: 60px;
+        font-size: calc(var(--mainFontSize) * 0.75);
+        padding: 4px 6px;
+    }
+    
+    .color-preview {
+        width: 20px;
+        height: 20px;
     }
 } 

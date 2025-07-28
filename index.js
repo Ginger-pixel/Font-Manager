@@ -16,6 +16,7 @@ const defaultSettings = {
     // UI 폰트 조절 값들
     uiFontSize: 14,
     uiFontWeight: 0,
+    uiFontColor: "", // 빈 문자열이면 기본 색상 사용
     // 채팅 폰트 조절 값들
     chatFontSize: 14,
     inputFontSize: 14,
@@ -33,6 +34,7 @@ let settings = null;
 // 임시 조절값들
 let tempUiFontSize = null;
 let tempUiFontWeight = null;
+let tempUiFontColor = null;
 let tempChatFontSize = null;
 let tempInputFontSize = null;
 let tempChatFontWeight = null;
@@ -52,6 +54,7 @@ function initSettings() {
     // 조절값 기본값 보장
     settings.uiFontSize = settings.uiFontSize ?? 14;
     settings.uiFontWeight = settings.uiFontWeight ?? 0;
+    settings.uiFontColor = settings.uiFontColor ?? "";
     settings.chatFontSize = settings.chatFontSize ?? 14;
     settings.inputFontSize = settings.inputFontSize ?? 14;
     settings.chatFontWeight = settings.chatFontWeight ?? 0;
@@ -61,6 +64,29 @@ function initSettings() {
 // 고유 ID 생성
 function generateId() {
     return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// 색상 유효성 검증
+function isValidHexColor(color) {
+    if (!color) return true; // 빈 문자열은 유효 (기본 색상 사용)
+    return /^[0-9A-Fa-f]{6}$/.test(color);
+}
+
+// 색상 미리보기 업데이트
+function updateColorPreview(inputElement, previewElement) {
+    const color = inputElement.val().trim();
+    if (isValidHexColor(color)) {
+        if (color) {
+            previewElement.css('background-color', '#' + color);
+            inputElement.removeClass('invalid');
+        } else {
+            previewElement.css('background-color', 'transparent');
+            inputElement.removeClass('invalid');
+        }
+    } else {
+        previewElement.css('background-color', '#ff0000'); // 오류 시 빨간색
+        inputElement.addClass('invalid');
+    }
 }
 
 // 프리셋 이름 설정 팝업 표시
@@ -204,6 +230,7 @@ async function openFontManagementPopup() {
         // 조절값들도 미리 적용
         tempUiFontSize = currentPreset?.uiFontSize ?? settings.uiFontSize;
         tempUiFontWeight = currentPreset?.uiFontWeight ?? settings.uiFontWeight;
+        tempUiFontColor = currentPreset?.uiFontColor ?? settings.uiFontColor;
         tempChatFontSize = currentPreset?.chatFontSize ?? settings.chatFontSize;
         tempInputFontSize = currentPreset?.inputFontSize ?? settings.inputFontSize;
         tempChatFontWeight = currentPreset?.chatFontWeight ?? settings.chatFontWeight;
@@ -238,6 +265,7 @@ async function openFontManagementPopup() {
         tempMessageFont = null;
         tempUiFontSize = null;
         tempUiFontWeight = null;
+        tempUiFontColor = null;
         tempChatFontSize = null;
         tempInputFontSize = null;
         tempChatFontWeight = null;
@@ -248,6 +276,7 @@ async function openFontManagementPopup() {
     tempUiFont = null;
     tempUiFontSize = null;
     tempUiFontWeight = null;
+    tempUiFontColor = null;
     tempChatFontSize = null;
     tempInputFontSize = null;
     tempChatFontWeight = null;
@@ -303,11 +332,14 @@ function renderUIFontSection(template) {
         // 조절바 값들 설정
         const uiFontSize = tempUiFontSize ?? currentPreset?.uiFontSize ?? settings.uiFontSize;
         const uiFontWeight = tempUiFontWeight ?? currentPreset?.uiFontWeight ?? settings.uiFontWeight;
+        const uiFontColor = tempUiFontColor ?? currentPreset?.uiFontColor ?? settings.uiFontColor;
         
         template.find('#ui-font-size-slider').val(uiFontSize);
         template.find('#ui-font-size-value').text(uiFontSize + 'px');
         template.find('#ui-font-weight-slider').val(uiFontWeight);
-        template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1));
+        template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1) + 'px');
+        template.find('#ui-font-color-input').val(uiFontColor);
+        updateColorPreview(template.find('#ui-font-color-input'), template.find('#ui-font-color-preview'));
         
         // 임시 값 설정
         if (tempUiFontSize === null) {
@@ -316,15 +348,21 @@ function renderUIFontSection(template) {
         if (tempUiFontWeight === null) {
             tempUiFontWeight = uiFontWeight;
         }
+        if (tempUiFontColor === null) {
+            tempUiFontColor = uiFontColor;
+        }
     } else {
         // 프리셋이 없을 때 기본값 설정
         const uiFontSize = tempUiFontSize ?? settings.uiFontSize;
         const uiFontWeight = tempUiFontWeight ?? settings.uiFontWeight;
+        const uiFontColor = tempUiFontColor ?? settings.uiFontColor;
         
         template.find('#ui-font-size-slider').val(uiFontSize);
         template.find('#ui-font-size-value').text(uiFontSize + 'px');
         template.find('#ui-font-weight-slider').val(uiFontWeight);
-        template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1));
+        template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1) + 'px');
+        template.find('#ui-font-color-input').val(uiFontColor);
+        updateColorPreview(template.find('#ui-font-color-input'), template.find('#ui-font-color-preview'));
     }
 }
 
@@ -366,7 +404,7 @@ function renderMessageFontSection(template) {
         template.find('#input-font-size-slider').val(inputFontSize);
         template.find('#input-font-size-value').text(inputFontSize + 'px');
         template.find('#chat-font-weight-slider').val(chatFontWeight);
-        template.find('#chat-font-weight-value').text(chatFontWeight.toFixed(1));
+        template.find('#chat-font-weight-value').text(chatFontWeight.toFixed(1) + 'px');
         template.find('#chat-line-height-slider').val(chatLineHeight);
         template.find('#chat-line-height-value').text(chatLineHeight.toFixed(1) + 'rem');
         
@@ -395,7 +433,7 @@ function renderMessageFontSection(template) {
         template.find('#input-font-size-slider').val(inputFontSize);
         template.find('#input-font-size-value').text(inputFontSize + 'px');
         template.find('#chat-font-weight-slider').val(chatFontWeight);
-        template.find('#chat-font-weight-value').text(chatFontWeight.toFixed(1));
+        template.find('#chat-font-weight-value').text(chatFontWeight.toFixed(1) + 'px');
         template.find('#chat-line-height-slider').val(chatLineHeight);
         template.find('#chat-line-height-value').text(chatLineHeight.toFixed(1) + 'rem');
     }
@@ -453,6 +491,7 @@ function saveOriginalUIStyles() {
         tempMessageFont: tempMessageFont,
         tempUiFontSize: tempUiFontSize,
         tempUiFontWeight: tempUiFontWeight,
+        tempUiFontColor: tempUiFontColor,
         tempChatFontSize: tempChatFontSize,
         tempInputFontSize: tempInputFontSize,
         tempChatFontWeight: tempChatFontWeight,
@@ -468,6 +507,7 @@ function restoreOriginalUIStyles() {
         tempMessageFont = originalUIStyles.tempMessageFont;
         tempUiFontSize = originalUIStyles.tempUiFontSize;
         tempUiFontWeight = originalUIStyles.tempUiFontWeight;
+        tempUiFontColor = originalUIStyles.tempUiFontColor;
         tempChatFontSize = originalUIStyles.tempChatFontSize;
         tempInputFontSize = originalUIStyles.tempInputFontSize;
         tempChatFontWeight = originalUIStyles.tempChatFontWeight;
@@ -477,6 +517,7 @@ function restoreOriginalUIStyles() {
         tempMessageFont = null;
         tempUiFontSize = null;
         tempUiFontWeight = null;
+        tempUiFontColor = null;
         tempChatFontSize = null;
         tempInputFontSize = null;
         tempChatFontWeight = null;
@@ -538,6 +579,7 @@ function updateUIFont() {
     // CSS 변수 설정
     const uiFontSize = tempUiFontSize ?? getCurrentPresetUIFontSize() ?? settings.uiFontSize;
     const uiFontWeight = tempUiFontWeight ?? getCurrentPresetUIFontWeight() ?? settings.uiFontWeight;
+    const uiFontColor = tempUiFontColor ?? getCurrentPresetUIFontColor() ?? settings.uiFontColor;
     const chatFontSize = tempChatFontSize ?? getCurrentPresetChatFontSize() ?? settings.chatFontSize;
     const inputFontSize = tempInputFontSize ?? getCurrentPresetInputFontSize() ?? settings.inputFontSize;
     const chatFontWeight = tempChatFontWeight ?? getCurrentPresetChatFontWeight() ?? settings.chatFontWeight;
@@ -546,10 +588,11 @@ function updateUIFont() {
     cssVariables.push(`
 :root {
   --font-manager-ui-size: ${uiFontSize}px;
-  --font-manager-ui-weight: ${uiFontWeight};
+  --font-manager-ui-weight: ${uiFontWeight}px;
+  --font-manager-ui-color: ${uiFontColor ? '#' + uiFontColor : 'inherit'};
   --font-manager-chat-size: ${chatFontSize}px;
   --font-manager-input-size: ${inputFontSize}px;
-  --font-manager-chat-weight: ${chatFontWeight};
+  --font-manager-chat-weight: ${chatFontWeight}px;
   --font-manager-chat-line-height: ${chatLineHeight}rem;
 }
     `);
@@ -591,6 +634,7 @@ html body textarea:not(#send_textarea) {
   font-weight: normal !important;
   line-height: 1.1rem !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+  color: var(--font-manager-ui-color) !important;
 }
         `);
     } else {
@@ -607,6 +651,7 @@ html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+  color: var(--font-manager-ui-color) !important;
 }
         `);
     }
@@ -720,6 +765,16 @@ function getCurrentPresetUIFontWeight() {
     return null;
 }
 
+function getCurrentPresetUIFontColor() {
+    const currentPresetId = settings?.currentPreset;
+    if (currentPresetId) {
+        const presets = settings?.presets || [];
+        const preset = presets.find(p => p.id === currentPresetId);
+        return preset?.uiFontColor || null;
+    }
+    return null;
+}
+
 // 현재 프리셋의 채팅 폰트 조절값들 가져오기
 function getCurrentPresetChatFontSize() {
     const currentPresetId = settings?.currentPreset;
@@ -784,6 +839,11 @@ function applyTempUIFontWeight(weight) {
     updateUIFont();
 }
 
+function applyTempUIFontColor(color) {
+    tempUiFontColor = color;
+    updateUIFont();
+}
+
 function applyTempChatFontSize(size) {
     tempChatFontSize = size;
     updateUIFont();
@@ -831,6 +891,7 @@ function setupEventListeners(template) {
             // 조절값들 적용
             tempUiFontSize = currentPreset?.uiFontSize ?? settings.uiFontSize;
             tempUiFontWeight = currentPreset?.uiFontWeight ?? settings.uiFontWeight;
+            tempUiFontColor = currentPreset?.uiFontColor ?? settings.uiFontColor;
             tempChatFontSize = currentPreset?.chatFontSize ?? settings.chatFontSize;
             tempInputFontSize = currentPreset?.inputFontSize ?? settings.inputFontSize;
             tempChatFontWeight = currentPreset?.chatFontWeight ?? settings.chatFontWeight;
@@ -931,8 +992,17 @@ function setupEventListeners(template) {
     
     template.find('#ui-font-weight-slider').off('input').on('input', function() {
         const weight = parseFloat($(this).val());
-        template.find('#ui-font-weight-value').text(weight.toFixed(1));
+        template.find('#ui-font-weight-value').text(weight.toFixed(1) + 'px');
         applyTempUIFontWeight(weight);
+    });
+    
+    // UI 폰트 색상 입력 이벤트
+    template.find('#ui-font-color-input').off('input').on('input', function() {
+        const color = $(this).val().trim();
+        updateColorPreview($(this), template.find('#ui-font-color-preview'));
+        if (isValidHexColor(color)) {
+            applyTempUIFontColor(color);
+        }
     });
     
     // 채팅 폰트 조절바 이벤트들
@@ -950,7 +1020,7 @@ function setupEventListeners(template) {
     
     template.find('#chat-font-weight-slider').off('input').on('input', function() {
         const weight = parseFloat($(this).val());
-        template.find('#chat-font-weight-value').text(weight.toFixed(1));
+        template.find('#chat-font-weight-value').text(weight.toFixed(1) + 'px');
         applyTempChatFontWeight(weight);
     });
     
@@ -1005,6 +1075,7 @@ function saveCurrentPreset() {
         // 조절값들도 저장
         preset.uiFontSize = tempUiFontSize ?? settings.uiFontSize;
         preset.uiFontWeight = tempUiFontWeight ?? settings.uiFontWeight;
+        preset.uiFontColor = tempUiFontColor ?? settings.uiFontColor; // 추가된 변수 저장
         preset.chatFontSize = tempChatFontSize ?? settings.chatFontSize;
         preset.inputFontSize = tempInputFontSize ?? settings.inputFontSize;
         preset.chatFontWeight = tempChatFontWeight ?? settings.chatFontWeight;
