@@ -64,39 +64,21 @@
     transform: scale(1.05);
 }
 
-/* 폰트 매니저 활성화 토글 섹션 */
-.font-manager-toggle-section {
+/* 더미 섹션 */
+.dummy-section {
     margin-bottom: 15px;
     padding: 15px;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     background-color: var(--black30a);
+    text-align: center;
 }
 
-.font-manager-toggle-section h3 {
-    margin: 0 0 10px 0;
+.dummy-section p {
+    margin: 0;
     color: var(--SmartThemeBodyColor);
     font-size: calc(var(--mainFontSize) * 1.1);
-}
-
-.toggle-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.toggle-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--SmartThemeBodyColor);
-    font-size: calc(var(--mainFontSize) * 0.9);
-    cursor: pointer;
-}
-
-.font-manager-toggle {
-    margin: 0;
-    cursor: pointer;
+    font-weight: 600;
 }
 
 /* UI 폰트 섹션 */
