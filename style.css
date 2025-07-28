@@ -740,7 +740,6 @@
     font-size: var(--mainFontSize);
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 10px;
 }
 
@@ -814,8 +813,9 @@
     
     .theme-rule-info {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
         gap: 5px;
+        text-align: center;
     }
     
     .theme-rule-arrow {
@@ -843,11 +843,11 @@
 
 /* 다국어 폰트 섹션 */
 .multi-language-font-section {
-    background-color: var(--black30a);
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
     margin-bottom: 15px;
+    background-color: var(--black30a);
     width: 100%;
     box-sizing: border-box;
 }
@@ -874,14 +874,13 @@
     gap: 8px;
     cursor: pointer;
     color: var(--SmartThemeBodyColor);
-    font-size: var(--mainFontSize);
+    font-size: calc(var(--mainFontSize) * 0.95);
     user-select: none;
 }
 
 .multi-language-toggle {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--SmartThemeQuoteColor);
+    width: 16px;
+    height: 16px;
     cursor: pointer;
 }
 
@@ -889,7 +888,7 @@
 .multi-language-font-selectors {
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 12px;
 }
 
 .multi-language-font-selectors.disabled-section {
@@ -897,26 +896,24 @@
     pointer-events: none;
 }
 
+.language-font-group {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    padding: 10px;
+    background-color: var(--black50a);
+}
+
 .language-font-row {
     display: flex;
     align-items: center;
     gap: 15px;
-    padding: 10px;
-    background-color: var(--black50a);
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 5px;
-    margin-bottom: 8px;
-}
-
-.language-font-row:last-child {
-    margin-bottom: 0;
 }
 
 .language-label {
     min-width: 60px;
     color: var(--SmartThemeBodyColor);
-    font-size: var(--mainFontSize);
-    font-weight: normal;
+    font-size: calc(var(--mainFontSize) * 0.9);
+    font-weight: 500;
     text-align: left;
 }
 
@@ -943,7 +940,7 @@
     border-color: var(--SmartThemeQuoteColor);
 }
 
-/* 반응형 디자인 */
+/* 다국어 섹션 반응형 디자인 */
 @media (max-width: 480px) {
     .language-font-row {
         flex-direction: column;
@@ -953,10 +950,18 @@
     
     .language-label {
         min-width: auto;
-        text-align: left;
+        text-align: center;
     }
     
     .language-font-dropdown {
         width: 100%;
+    }
+    
+    .language-font-group {
+        padding: 8px;
+    }
+    
+    .multi-language-font-selectors {
+        gap: 10px;
     }
 } 
