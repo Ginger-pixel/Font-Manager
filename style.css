@@ -59,7 +59,6 @@
 /* UI 폰트 섹션 */
 .ui-font-section,
 .message-font-section {
-    border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
     margin-bottom: 15px;
@@ -189,7 +188,6 @@
 
 /* 폰트 추가 영역 */
 .font-add-area {
-    border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
     margin-bottom: 15px;
@@ -255,7 +253,6 @@
 
 /* 폰트 리스트 영역 */
 .font-list-area {
-    border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
     background-color: var(--black30a);
