@@ -838,4 +838,126 @@
         padding: 6px 8px;
         font-size: 12px;
     }
+}
+
+/* === 다국어 폰트 섹션 스타일 === */
+
+/* 다국어 폰트 섹션 */
+.multilang-font-section {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 8px;
+    background-color: var(--black30a);
+    transition: opacity 0.3s ease;
+}
+
+.multilang-font-section h3 {
+    margin: 0 0 15px 0;
+    font-size: calc(var(--mainFontSize) * 1.1);
+    color: var(--SmartThemeQuoteColor);
+    font-weight: 600;
+}
+
+/* 다국어 활성화 토글 */
+.multilang-toggle-row {
+    margin-bottom: 15px;
+}
+
+.multilang-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 0.95);
+}
+
+.multilang-toggle {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--SmartThemeQuoteColor);
+}
+
+/* 다국어 폰트 선택기들 */
+.multilang-font-selectors {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.multilang-font-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.multilang-font-label {
+    min-width: 60px;
+    font-size: calc(var(--mainFontSize) * 0.9);
+    color: var(--SmartThemeBodyColor);
+    font-weight: 500;
+}
+
+.multilang-font-dropdown {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 4px;
+    background-color: var(--black30a);
+    color: var(--SmartThemeBodyColor);
+    font-family: inherit;
+    font-size: calc(var(--mainFontSize) * 0.85);
+    transition: all 0.2s ease;
+}
+
+.multilang-font-dropdown:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.2);
+}
+
+.multilang-font-dropdown:disabled {
+    background-color: var(--black50a);
+    color: var(--SmartThemeDisabledColor);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 다국어 섹션 비활성화 상태 */
+.multilang-font-section.disabled-multilang {
+    opacity: 0.6;
+}
+
+.disabled-multilang .multilang-font-selectors {
+    pointer-events: none;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 600px) {
+    .multilang-font-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .multilang-font-label {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .multilang-font-dropdown {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .multilang-font-section {
+        padding: 12px;
+    }
+    
+    .multilang-toggle-label {
+        font-size: calc(var(--mainFontSize) * 0.9);
+    }
 } 
