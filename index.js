@@ -713,7 +713,6 @@ function updateUIFont() {
     
     // 현재 UI 폰트 적용 (명시적 기본 폰트 선택 시 프리셋 무시)
     const currentFontName = isUIFontExplicitlyDefault ? null : (tempUiFont || getCurrentPresetUIFont());
-    console.log('[Font-Manager] UI 폰트 적용:', currentFontName, '(명시적 기본:', isUIFontExplicitlyDefault + ')');
     
     // 실제 사용할 font-family 이름 찾기
     let actualFontFamily = currentFontName;
@@ -743,7 +742,7 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 기본 폰트일 때 시스템 기본 폰트 스택을 명시적으로 설정
+        // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
         uiFontCss.push(`
 /* UI FONT SIZE/WEIGHT APPLICATION - Font Manager Override (Default Font) */
 html body,
@@ -754,7 +753,7 @@ html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-family: initial !important;
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
@@ -763,7 +762,6 @@ html body textarea:not(#send_textarea) {
     
     // 현재 메시지 폰트 적용 (명시적 기본 폰트 선택 시 프리셋 무시)
     const currentMessageFontName = isMessageFontExplicitlyDefault ? null : (tempMessageFont || getCurrentPresetMessageFont());
-    console.log('[Font-Manager] 메시지 폰트 적용:', currentMessageFontName, '(명시적 기본:', isMessageFontExplicitlyDefault + ')');
     
     // 실제 사용할 메시지 font-family 이름 찾기
     let actualMessageFontFamily = currentMessageFontName;
@@ -791,18 +789,18 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 기본 폰트일 때 시스템 기본 폰트 스택을 명시적으로 설정
+        // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
         uiFontCss.push(`
 /* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override (Default Font) */
 .mes * {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-family: initial !important;
   font-size: var(--font-manager-chat-size) !important;
   line-height: var(--font-manager-chat-line-height) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
 
 #send_form textarea {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-family: initial !important;
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
@@ -916,7 +914,6 @@ function getCurrentPresetChatLineHeight() {
 
 // UI 폰트 임시 적용
 function applyTempUIFont(fontName) {
-    console.log('[Font-Manager] UI 폰트 변경:', fontName);
     tempUiFont = fontName;
     isUIFontExplicitlyDefault = false; // 사용자 정의 폰트 선택 시 기본 폰트 플래그 해제
     updateUIFont();
@@ -924,7 +921,6 @@ function applyTempUIFont(fontName) {
 
 // 메시지 폰트 임시 적용
 function applyTempMessageFont(fontName) {
-    console.log('[Font-Manager] 메시지 폰트 변경:', fontName);
     tempMessageFont = fontName;
     isMessageFontExplicitlyDefault = false; // 사용자 정의 폰트 선택 시 기본 폰트 플래그 해제
     updateUIFont();
@@ -1074,13 +1070,11 @@ function setupEventListeners(template) {
     // UI 폰트 드롭다운 변경 이벤트
     template.find('#ui-font-dropdown').off('change').on('change', function() {
         const fontName = $(this).val();
-        console.log('[Font-Manager] UI 폰트 드롭다운 변경:', fontName);
         if (fontName && fontName !== "") {
             isUIFontExplicitlyDefault = false;
             applyTempUIFont(fontName);
         } else {
             // 기본 폰트 선택 - 명시적으로 기본 폰트 플래그 설정
-            console.log('[Font-Manager] UI 기본 폰트 선택');
             isUIFontExplicitlyDefault = true;
             tempUiFont = null;
             updateUIFont();
@@ -1090,13 +1084,11 @@ function setupEventListeners(template) {
     // 메시지 폰트 드롭다운 변경 이벤트
     template.find('#message-font-dropdown').off('change').on('change', function() {
         const fontName = $(this).val();
-        console.log('[Font-Manager] 메시지 폰트 드롭다운 변경:', fontName);
         if (fontName && fontName !== "") {
             isMessageFontExplicitlyDefault = false;
             applyTempMessageFont(fontName);
         } else {
             // 기본 폰트 선택 - 명시적으로 기본 폰트 플래그 설정
-            console.log('[Font-Manager] 메시지 기본 폰트 선택');
             isMessageFontExplicitlyDefault = true;
             tempMessageFont = null;
             updateUIFont();
