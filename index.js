@@ -634,7 +634,34 @@ html body textarea:not(#send_textarea) {
   font-weight: normal !important;
   line-height: 1.1rem !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+}
+
+/* UI COLOR APPLICATION - Specific Elements Only */
+.drawer-icon {
   color: var(--font-manager-ui-color) !important;
+}
+
+#quickPersona {
+  color: var(--font-manager-ui-color) !important;
+}
+
+.tags.rm_tag_filter .tag:not(.actionable) {
+  & small,
+  & span {
+    color: var(--font-manager-ui-color) !important;
+  }
+
+  &,
+  & i,
+  &::before {
+    color: var(--font-manager-ui-color) !important;
+  }
+}
+
+.drawer-content label:has(input) {
+  & * {
+    color: var(--font-manager-ui-color) !important;
+  }
 }
         `);
     } else {
@@ -651,7 +678,34 @@ html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+}
+
+/* UI COLOR APPLICATION - Specific Elements Only */
+.drawer-icon {
   color: var(--font-manager-ui-color) !important;
+}
+
+#quickPersona {
+  color: var(--font-manager-ui-color) !important;
+}
+
+.tags.rm_tag_filter .tag:not(.actionable) {
+  & small,
+  & span {
+    color: var(--font-manager-ui-color) !important;
+  }
+
+  &,
+  & i,
+  &::before {
+    color: var(--font-manager-ui-color) !important;
+  }
+}
+
+.drawer-content label:has(input) {
+  & * {
+    color: var(--font-manager-ui-color) !important;
+  }
 }
         `);
     }
