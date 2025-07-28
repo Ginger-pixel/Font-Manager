@@ -1013,11 +1013,19 @@ function updateUIFont() {
 html body,
 html body input,
 html body select,
-html body span,
 html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
+  font-family: "${actualFontFamily}", Sans-Serif !important;
+  font-size: var(--font-manager-ui-size) !important;
+  font-weight: normal !important;
+  line-height: 1.1rem !important;
+  -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+}
+
+/* UI FONT FOR SPANS - 챗 액션 버튼 제외 */
+html body span:not(.mes_edit_buttons *):not(.mes_buttons *):not(.extraMesButtons *):not(.swipe_right):not(.swipe_left):not(.menu_button) {
   font-family: "${actualFontFamily}", Sans-Serif !important;
   font-size: var(--font-manager-ui-size) !important;
   font-weight: normal !important;
@@ -1032,11 +1040,16 @@ html body textarea:not(#send_textarea) {
 html body,
 html body input,
 html body select,
-html body span,
 html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
+  font-size: var(--font-manager-ui-size) !important;
+  -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+}
+
+/* UI FONT SIZE/WEIGHT FOR SPANS - 챗 액션 버튼 제외 */
+html body span:not(.mes_edit_buttons *):not(.mes_buttons *):not(.extraMesButtons *):not(.swipe_right):not(.swipe_left):not(.menu_button) {
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
@@ -1091,6 +1104,42 @@ html body textarea:not(#send_textarea) {
     // 다국어 폰트 CSS 생성
     const multiLangCss = generateMultiLanguageFontCSS();
     
+    // 챗 액션 버튼 보호 CSS
+    const chatActionProtectionCss = `
+/* === 챗 액션 버튼 보호 - Font Manager Override 방지 === */
+.mes_edit_buttons,
+.mes_buttons,
+.extraMesButtons,
+.swipe_right,
+.swipe_left,
+.menu_button,
+.mes_edit_buttons .menu_button,
+.mes_buttons .menu_button,
+.extraMesButtons .menu_button {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  -webkit-text-stroke: inherit !important;
+  opacity: inherit !important;
+  filter: inherit !important;
+}
+
+/* 챗 액션 버튼 내부 요소들도 보호 */
+.mes_edit_buttons *,
+.mes_buttons *,
+.extraMesButtons *,
+.swipe_right *,
+.swipe_left *,
+.menu_button * {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  -webkit-text-stroke: inherit !important;
+}
+    `;
+
     const finalCss = [
         '/*',
         ' * === CSS VARIABLES ===',
@@ -1106,6 +1155,11 @@ html body textarea:not(#send_textarea) {
         ' * === UI FONT APPLICATION ===',
         ' */',
         uiFontCss.join('\n\n'),
+        '\n\n',
+        '/*',
+        ' * === CHAT ACTION BUTTON PROTECTION ===',
+        ' */',
+        chatActionProtectionCss,
         '\n\n',
         '/*',
         ' * === MULTILANG FONT CLASSES ===',
