@@ -838,4 +838,117 @@
         padding: 6px 8px;
         font-size: 12px;
     }
+}
+
+/* 다국어 폰트 섹션 */
+.multi-language-font-section {
+    background-color: var(--black20a);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.multi-language-font-section.disabled-section {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.multi-language-font-section h3 {
+    margin: 0 0 15px 0;
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 1.1);
+    font-weight: 600;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    padding-bottom: 8px;
+}
+
+/* 다국어 활성화 토글 */
+.multi-language-toggle-row {
+    margin-bottom: 15px;
+}
+
+.multi-language-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 0.95);
+    user-select: none;
+}
+
+.multi-language-toggle {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--SmartThemeQuoteColor);
+    cursor: pointer;
+}
+
+/* 언어별 폰트 선택기들 */
+.multi-language-font-selectors {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.multi-language-font-selectors.disabled-section {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.language-font-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.language-label {
+    min-width: 60px;
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 0.9);
+    font-weight: 500;
+    text-align: left;
+}
+
+.language-font-dropdown {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black30a);
+    color: var(--SmartThemeBodyColor);
+    font-family: inherit;
+    font-size: calc(var(--mainFontSize) * 0.9);
+    transition: all 0.2s ease;
+    min-width: 0;
+}
+
+.language-font-dropdown:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
+}
+
+.language-font-dropdown:hover {
+    border-color: var(--SmartThemeQuoteColor);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+    .language-font-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .language-label {
+        min-width: auto;
+        text-align: left;
+    }
+    
+    .language-font-dropdown {
+        width: 100%;
+    }
 } 

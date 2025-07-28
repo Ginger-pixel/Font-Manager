@@ -17,6 +17,14 @@ const defaultSettings = {
     // 현재 선택된 폰트들
     currentUiFont: null,
     currentMessageFont: null,
+    // 다국어 폰트 설정
+    multiLanguageEnabled: false,
+    languageFonts: {
+        english: null,
+        korean: null,
+        japanese: null,
+        chinese: null
+    },
     // UI 폰트 조절 값들
     uiFontSize: 14,
     uiFontWeight: 0,
@@ -39,6 +47,9 @@ let settings = null;
 // 기본 폰트 명시적 선택 플래그
 let isUIFontExplicitlyDefault = false;
 let isMessageFontExplicitlyDefault = false;
+// 다국어 임시 설정들
+let tempMultiLanguageEnabled = null;
+let tempLanguageFonts = null;
 // 임시 조절값들
 let tempUiFontSize = null;
 let tempUiFontWeight = null;
@@ -63,6 +74,14 @@ function initSettings() {
     // 폰트 이름 기본값 보장
     settings.currentUiFont = settings.currentUiFont ?? null;
     settings.currentMessageFont = settings.currentMessageFont ?? null;
+    // 다국어 설정 기본값 보장
+    settings.multiLanguageEnabled = settings.multiLanguageEnabled ?? false;
+    settings.languageFonts = settings.languageFonts ?? {
+        english: null,
+        korean: null,
+        japanese: null,
+        chinese: null
+    };
     // 조절값 기본값 보장
     settings.uiFontSize = settings.uiFontSize ?? 14;
     settings.uiFontWeight = settings.uiFontWeight ?? 0;
@@ -78,6 +97,13 @@ function initSettings() {
             name: "default",
             uiFont: null,
             messageFont: null,
+            multiLanguageEnabled: false,
+            languageFonts: {
+                english: null,
+                korean: null,
+                japanese: null,
+                chinese: null
+            },
             uiFontSize: 14,
             uiFontWeight: 0,
             chatFontSize: 14,
@@ -94,6 +120,10 @@ function initSettings() {
 function generateId() {
     return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
+
+
+
+
 
 // 프리셋 이름 설정 팝업 표시
 async function showPresetNamePopup(existingName = '') {
@@ -226,6 +256,8 @@ async function openFontManagementPopup() {
     // 전역 설정을 기본으로 적용 (프리셋보다 우선)
     tempUiFont = settings.currentUiFont;
     tempMessageFont = settings.currentMessageFont;
+    tempMultiLanguageEnabled = settings.multiLanguageEnabled;
+    tempLanguageFonts = { ...settings.languageFonts };
     tempUiFontSize = settings.uiFontSize;
     tempUiFontWeight = settings.uiFontWeight;
     tempChatFontSize = settings.chatFontSize;
@@ -238,6 +270,7 @@ async function openFontManagementPopup() {
     renderToggleSection(template);
     renderUIFontSection(template);
     renderMessageFontSection(template);
+    renderMultiLanguageFontSection(template);
     renderThemeLinkingSection(template);
     renderFontAddArea(template);
     renderFontList(template);
@@ -263,6 +296,8 @@ async function openFontManagementPopup() {
         restoreOriginalUIStyles();
         tempUiFont = null;
         tempMessageFont = null;
+        tempMultiLanguageEnabled = null;
+        tempLanguageFonts = null;
         isUIFontExplicitlyDefault = false;
         isMessageFontExplicitlyDefault = false;
         tempUiFontSize = null;
@@ -276,6 +311,8 @@ async function openFontManagementPopup() {
     // 임시 변수 초기화
     tempUiFont = null;
     tempMessageFont = null;
+    tempMultiLanguageEnabled = null;
+    tempLanguageFonts = null;
     isUIFontExplicitlyDefault = false;
     isMessageFontExplicitlyDefault = false;
     tempUiFontSize = null;
@@ -318,7 +355,8 @@ function renderToggleSection(template) {
 function updateSectionsState(template, enabled) {
     const sections = [
         '#ui-font-section',
-        '#message-font-section', 
+        '#message-font-section',
+        '#multi-language-font-section', 
         '#theme-linking-section',
         '#font-add-area',
         '#font-list-area'
@@ -376,6 +414,59 @@ function renderUIFontSection(template) {
     template.find('#ui-font-size-value').text(uiFontSize + 'px');
     template.find('#ui-font-weight-slider').val(uiFontWeight);
     template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1) + 'px');
+}
+
+// 다국어 폰트 섹션 렌더링
+function renderMultiLanguageFontSection(template) {
+    const fonts = settings?.fonts || [];
+    
+    // 다국어 활성화 체크박스 설정
+    const multiLangEnabled = tempMultiLanguageEnabled ?? settings.multiLanguageEnabled;
+    template.find('#multi-language-enabled-toggle').prop('checked', multiLangEnabled);
+    
+    // 언어별 폰트 드롭다운 설정
+    const languages = ['english', 'korean', 'japanese', 'chinese'];
+    const languageNames = {
+        english: '영어',
+        korean: '한국어',
+        japanese: '일본어',
+        chinese: '중국어'
+    };
+    
+    languages.forEach(lang => {
+        const dropdown = template.find(`#${lang}-font-dropdown`);
+        dropdown.empty();
+        dropdown.append('<option value="">기본 폰트</option>');
+        
+        fonts.forEach(font => {
+            dropdown.append(`<option value="${font.name}">${font.name}</option>`);
+        });
+        
+        // 현재 설정된 폰트 선택
+        const currentLanguageFonts = tempLanguageFonts ?? settings.languageFonts;
+        const selectedFont = currentLanguageFonts[lang];
+        if (selectedFont) {
+            dropdown.val(selectedFont);
+        } else {
+            dropdown.val("");
+        }
+    });
+    
+    // 다국어 활성화 상태에 따라 섹션 활성화/비활성화
+    updateMultiLanguageSectionState(template, multiLangEnabled);
+}
+
+// 다국어 섹션 활성화 상태 업데이트
+function updateMultiLanguageSectionState(template, enabled) {
+    const languageSelectors = template.find('.multi-language-font-selectors');
+    
+    if (enabled) {
+        languageSelectors.removeClass('disabled-section');
+        languageSelectors.find('select').prop('disabled', false);
+    } else {
+        languageSelectors.addClass('disabled-section');
+        languageSelectors.find('select').prop('disabled', true);
+    }
 }
 
 // 메시지 폰트 섹션 렌더링
@@ -517,6 +608,8 @@ function saveOriginalUIStyles() {
     originalUIStyles = {
         tempUiFont: tempUiFont,
         tempMessageFont: tempMessageFont,
+        tempMultiLanguageEnabled: tempMultiLanguageEnabled,
+        tempLanguageFonts: tempLanguageFonts ? { ...tempLanguageFonts } : null,
         isUIFontExplicitlyDefault: isUIFontExplicitlyDefault,
         isMessageFontExplicitlyDefault: isMessageFontExplicitlyDefault,
         tempUiFontSize: tempUiFontSize,
@@ -534,6 +627,8 @@ function restoreOriginalUIStyles() {
     if (originalUIStyles) {
         tempUiFont = originalUIStyles.tempUiFont;
         tempMessageFont = originalUIStyles.tempMessageFont;
+        tempMultiLanguageEnabled = originalUIStyles.tempMultiLanguageEnabled;
+        tempLanguageFonts = originalUIStyles.tempLanguageFonts ? { ...originalUIStyles.tempLanguageFonts } : null;
         isUIFontExplicitlyDefault = originalUIStyles.isUIFontExplicitlyDefault || false;
         isMessageFontExplicitlyDefault = originalUIStyles.isMessageFontExplicitlyDefault || false;
         tempUiFontSize = originalUIStyles.tempUiFontSize;
@@ -545,6 +640,8 @@ function restoreOriginalUIStyles() {
     } else {
         tempUiFont = null;
         tempMessageFont = null;
+        tempMultiLanguageEnabled = null;
+        tempLanguageFonts = null;
         isUIFontExplicitlyDefault = false;
         isMessageFontExplicitlyDefault = false;
         tempUiFontSize = null;
@@ -707,20 +804,74 @@ html body textarea:not(#send_textarea) {
         `);
     }
     
-    // 현재 메시지 폰트 적용 (임시 폰트 우선, 없으면 전역 설정, 명시적 기본 폰트 선택 시 null)
-    const currentMessageFontName = isMessageFontExplicitlyDefault ? null : (tempMessageFont ?? settings.currentMessageFont);
+    // 다국어 폰트 또는 메시지 폰트 적용 결정
+    const isMultiLanguageEnabled = tempMultiLanguageEnabled ?? settings.multiLanguageEnabled;
     
-    // 실제 사용할 메시지 font-family 이름 찾기
-    let actualMessageFontFamily = currentMessageFontName;
-    if (currentMessageFontName) {
-        const selectedMessageFont = fonts.find(font => font.name === currentMessageFontName);
-        if (selectedMessageFont && selectedMessageFont.fontFamily) {
-            actualMessageFontFamily = selectedMessageFont.fontFamily;
+    if (isMultiLanguageEnabled) {
+        // 다국어 폰트 모드
+        const currentLanguageFonts = tempLanguageFonts ?? settings.languageFonts;
+        const languageFontCss = [];
+        
+        // 언어별 폰트 CSS 생성 (메모리 효율적)
+        const fontFamilyList = [];
+        Object.entries(currentLanguageFonts).forEach(([lang, fontName]) => {
+            if (fontName) {
+                const selectedFont = fonts.find(font => font.name === fontName);
+                const actualFontFamily = (selectedFont && selectedFont.fontFamily) ? selectedFont.fontFamily : fontName;
+                fontFamilyList.push(`"${actualFontFamily}"`);
+            }
+        });
+        
+        // 다국어 폰트 적용 CSS
+        if (fontFamilyList.length > 0) {
+            uiFontCss.push(`
+/* MULTI-LANGUAGE MESSAGE FONT APPLICATION */
+.mes *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([class*="fa-"]):not(i[class*="fa"]) {
+  font-family: ${fontFamilyList.join(', ')}, sans-serif !important;
+  font-size: var(--font-manager-chat-size) !important;
+  line-height: var(--font-manager-chat-line-height) !important;
+  -webkit-text-stroke: var(--font-manager-chat-weight) !important;
+}
+
+#send_form textarea {
+  font-family: ${fontFamilyList.join(', ')}, sans-serif !important;
+  font-size: var(--font-manager-input-size) !important;
+  -webkit-text-stroke: var(--font-manager-chat-weight) !important;
+}
+            `);
+        } else {
+            // 다국어 활성화되었지만 설정된 폰트가 없는 경우
+            uiFontCss.push(`
+/* MULTI-LANGUAGE MODE - NO FONTS SET */
+.mes *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([class*="fa-"]):not(i[class*="fa"]) {
+  font-family: initial !important;
+  font-size: var(--font-manager-chat-size) !important;
+  line-height: var(--font-manager-chat-line-height) !important;
+  -webkit-text-stroke: var(--font-manager-chat-weight) !important;
+}
+
+#send_form textarea {
+  font-family: initial !important;
+  font-size: var(--font-manager-input-size) !important;
+  -webkit-text-stroke: var(--font-manager-chat-weight) !important;
+}
+            `);
         }
-    }
-    
-    if (currentMessageFontName && actualMessageFontFamily) {
-        uiFontCss.push(`
+    } else {
+        // 기존 메시지 폰트 모드
+        const currentMessageFontName = isMessageFontExplicitlyDefault ? null : (tempMessageFont ?? settings.currentMessageFont);
+        
+        // 실제 사용할 메시지 font-family 이름 찾기
+        let actualMessageFontFamily = currentMessageFontName;
+        if (currentMessageFontName) {
+            const selectedMessageFont = fonts.find(font => font.name === currentMessageFontName);
+            if (selectedMessageFont && selectedMessageFont.fontFamily) {
+                actualMessageFontFamily = selectedMessageFont.fontFamily;
+            }
+        }
+        
+        if (currentMessageFontName && actualMessageFontFamily) {
+            uiFontCss.push(`
 /* MESSAGE FONT APPLICATION - Font Manager Override */
 .mes *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([class*="fa-"]):not(i[class*="fa"]) {
   font-family: "${actualMessageFontFamily}" !important;
@@ -734,16 +885,10 @@ html body textarea:not(#send_textarea) {
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
-
-/* 메시지 영역 FontAwesome 아이콘 보호 */
-.mes .fa, .mes .fas, .mes .far, .mes .fab, .mes .fal, .mes .fad, .mes .fass, .mes .fasr, .mes .fasl, .mes .fasd,
-.mes [class*="fa-"], .mes i[class*="fa"] {
-  font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
-}
-        `);
-    } else {
-        // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
-        uiFontCss.push(`
+            `);
+        } else {
+            // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
+            uiFontCss.push(`
 /* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override (Default Font) */
 .mes *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([class*="fa-"]):not(i[class*="fa"]) {
   font-family: initial !important;
@@ -757,14 +902,18 @@ html body textarea:not(#send_textarea) {
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
-
-/* 메시지 영역 FontAwesome 아이콘 보호 (기본 폰트) */
+            `);
+        }
+    }
+    
+    // FontAwesome 아이콘 보호 (공통)
+    uiFontCss.push(`
+/* 메시지 영역 FontAwesome 아이콘 보호 */
 .mes .fa, .mes .fas, .mes .far, .mes .fab, .mes .fal, .mes .fad, .mes .fass, .mes .fasr, .mes .fasl, .mes .fasd,
 .mes [class*="fa-"], .mes i[class*="fa"] {
   font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
 }
-        `);
-    }
+    `);
     
     const finalCss = [
         '/*',
@@ -952,6 +1101,10 @@ function setupEventListeners(template) {
                 applyTempMessageFont(null); // 기본 폰트
             }
             
+            // 다국어 설정 적용
+            tempMultiLanguageEnabled = currentPreset?.multiLanguageEnabled ?? settings.multiLanguageEnabled;
+            tempLanguageFonts = currentPreset?.languageFonts ? { ...currentPreset.languageFonts } : { ...settings.languageFonts };
+            
             // 조절값들을 임시 값으로만 적용
             tempUiFontSize = currentPreset?.uiFontSize ?? settings.uiFontSize;
             tempUiFontWeight = currentPreset?.uiFontWeight ?? settings.uiFontWeight;
@@ -962,6 +1115,7 @@ function setupEventListeners(template) {
             
             renderUIFontSection(template);
             renderMessageFontSection(template);
+            renderMultiLanguageFontSection(template);
             setupEventListeners(template);
             updateUIFont(); // 조절값 변경사항 즉시 적용
         }
@@ -1023,6 +1177,7 @@ function setupEventListeners(template) {
             renderPresetDropdown(template);
             renderUIFontSection(template);
             renderMessageFontSection(template);
+            renderMultiLanguageFontSection(template);
             renderThemeLinkingSection(template);
             setupEventListeners(template);
         }
@@ -1054,6 +1209,26 @@ function setupEventListeners(template) {
             tempMessageFont = null;
             updateUIFont();
         }
+    });
+    
+    // 다국어 폰트 활성화 토글 이벤트
+    template.find('#multi-language-enabled-toggle').off('change').on('change', function() {
+        tempMultiLanguageEnabled = $(this).prop('checked');
+        updateMultiLanguageSectionState(template, tempMultiLanguageEnabled);
+        updateUIFont(); // 다국어 설정 변경 시 폰트 업데이트
+    });
+    
+    // 언어별 폰트 드롭다운 변경 이벤트
+    const languages = ['english', 'korean', 'japanese', 'chinese'];
+    languages.forEach(lang => {
+        template.find(`#${lang}-font-dropdown`).off('change').on('change', function() {
+            const fontName = $(this).val();
+            if (!tempLanguageFonts) {
+                tempLanguageFonts = { ...settings.languageFonts };
+            }
+            tempLanguageFonts[lang] = fontName || null;
+            updateUIFont(); // 언어별 폰트 변경 시 즉시 적용
+        });
     });
     
     // UI 폰트 조절바 이벤트들
@@ -1111,6 +1286,7 @@ function setupEventListeners(template) {
             template.find('#font-source-textarea').val('');
             renderUIFontSection(template);
             renderMessageFontSection(template);
+            renderMultiLanguageFontSection(template);
             renderThemeLinkingSection(template);
             renderFontList(template);
             setupEventListeners(template);
@@ -1254,6 +1430,14 @@ function saveCurrentSettingsToGlobal() {
     settings.currentUiFont = tempUiFont;
     settings.currentMessageFont = tempMessageFont;
     
+    // 다국어 설정 저장
+    if (tempMultiLanguageEnabled !== null) {
+        settings.multiLanguageEnabled = tempMultiLanguageEnabled;
+    }
+    if (tempLanguageFonts !== null) {
+        settings.languageFonts = { ...tempLanguageFonts };
+    }
+    
     // 현재 임시값들을 전역 설정에 저장
     if (tempUiFontSize !== null) {
         settings.uiFontSize = tempUiFontSize;
@@ -1291,6 +1475,8 @@ function saveCurrentPreset() {
         // 프리셋에 저장
         preset.uiFont = tempUiFont;
         preset.messageFont = tempMessageFont;
+        preset.multiLanguageEnabled = tempMultiLanguageEnabled ?? settings.multiLanguageEnabled;
+        preset.languageFonts = tempLanguageFonts ? { ...tempLanguageFonts } : { ...settings.languageFonts };
         preset.uiFontSize = tempUiFontSize ?? settings.uiFontSize;
         preset.uiFontWeight = tempUiFontWeight ?? settings.uiFontWeight;
         preset.chatFontSize = tempChatFontSize ?? settings.chatFontSize;
@@ -1301,6 +1487,12 @@ function saveCurrentPreset() {
         // 전역 설정에도 저장
         settings.currentUiFont = tempUiFont;
         settings.currentMessageFont = tempMessageFont;
+        if (tempMultiLanguageEnabled !== null) {
+            settings.multiLanguageEnabled = tempMultiLanguageEnabled;
+        }
+        if (tempLanguageFonts !== null) {
+            settings.languageFonts = { ...tempLanguageFonts };
+        }
         if (tempUiFontSize !== null) {
             settings.uiFontSize = tempUiFontSize;
         }
@@ -1354,6 +1546,7 @@ function deletePreset(template, presetId) {
         renderPresetDropdown(template);
         renderUIFontSection(template);
         renderMessageFontSection(template);
+        renderMultiLanguageFontSection(template);
         renderThemeLinkingSection(template);
         setupEventListeners(template);
         
@@ -1376,6 +1569,7 @@ function deleteFont(template, fontId) {
         // UI 업데이트
         renderUIFontSection(template);
         renderMessageFontSection(template);
+        renderMultiLanguageFontSection(template);
         renderThemeLinkingSection(template);
         renderFontList(template);
         setupEventListeners(template);
@@ -1458,6 +1652,8 @@ function applyPresetById(presetId) {
     // 프리셋의 폰트들과 조절값들을 임시 변수에 설정
     tempUiFont = preset.uiFont || null;
     tempMessageFont = preset.messageFont || null;
+    tempMultiLanguageEnabled = preset.multiLanguageEnabled ?? settings.multiLanguageEnabled;
+    tempLanguageFonts = preset.languageFonts ? { ...preset.languageFonts } : { ...settings.languageFonts };
     tempUiFontSize = preset.uiFontSize ?? settings.uiFontSize;
     tempUiFontWeight = preset.uiFontWeight ?? settings.uiFontWeight;
     tempChatFontSize = preset.chatFontSize ?? settings.chatFontSize;
