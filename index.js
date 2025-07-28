@@ -13,8 +13,6 @@ const defaultSettings = {
     fonts: [],
     presets: [],
     currentPreset: null,
-    // 폰트 매니저 활성화 상태
-    isEnabled: true,
     // UI 폰트 조절 값들
     uiFontSize: 14,
     uiFontWeight: 0,
@@ -54,7 +52,6 @@ function initSettings() {
     settings.presets = settings.presets ?? [];
     settings.currentPreset = settings.currentPreset ?? null;
     settings.themeRules = settings.themeRules ?? [];
-    settings.isEnabled = settings.isEnabled ?? true;
     // 조절값 기본값 보장
     settings.uiFontSize = settings.uiFontSize ?? 14;
     settings.uiFontWeight = settings.uiFontWeight ?? 0;
@@ -67,7 +64,7 @@ function initSettings() {
     if (settings.presets.length === 0) {
         const defaultPreset = {
             id: generateId(),
-            name: 'default',
+            name: "default",
             uiFont: null,
             messageFont: null,
             uiFontSize: 14,
@@ -236,7 +233,6 @@ async function openFontManagementPopup() {
     
     // 모든 영역 렌더링
     renderPresetDropdown(template);
-    renderToggleSection(template);
     renderUIFontSection(template);
     renderMessageFontSection(template);
     renderThemeLinkingSection(template);
@@ -299,13 +295,6 @@ function renderPresetDropdown(template) {
             dropdown.append(`<option value="${preset.id}" ${isSelected ? 'selected' : ''}>${preset.name}</option>`);
         });
     }
-}
-
-// 토글 섹션 렌더링
-function renderToggleSection(template) {
-    const isEnabled = settings?.isEnabled ?? true;
-    const checkbox = template.find('#font-manager-enabled');
-    checkbox.prop('checked', isEnabled);
 }
 
 // UI 폰트 섹션 렌더링
@@ -619,12 +608,6 @@ function updateUIFont() {
         document.head.appendChild(fontStyle);
     }
     
-    // 폰트 매니저가 비활성화되어 있으면 빈 스타일로 설정
-    if (!settings?.isEnabled) {
-        fontStyle.innerHTML = '/* Font Manager Disabled */';
-        return;
-    }
-    
     const fontCss = [];
     const uiFontCss = [];
     const cssVariables = [];
@@ -688,7 +671,7 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 폰트가 선택되지 않았을 때는 기본 폰트로 초기화 + 조절값 적용
+        // 폰트가 선택되지 않았어도 조절값은 적용
         uiFontCss.push(`
 /* UI FONT SIZE/WEIGHT APPLICATION - Font Manager Override */
 html body,
@@ -699,7 +682,6 @@ html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
-  font-family: inherit !important;
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
@@ -735,18 +717,16 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 폰트가 선택되지 않았을 때는 기본 폰트로 초기화 + 조절값 적용
+        // 폰트가 선택되지 않았어도 조절값은 적용
         uiFontCss.push(`
 /* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override */
 .mes * {
-  font-family: inherit !important;
   font-size: var(--font-manager-chat-size) !important;
   line-height: var(--font-manager-chat-line-height) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
 
 #send_form textarea {
-  font-family: inherit !important;
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
@@ -903,14 +883,6 @@ function applyTempChatLineHeight(height) {
 
 // 이벤트 리스너 설정
 function setupEventListeners(template) {
-    // 폰트 매니저 활성화 토글 이벤트
-    template.find('#font-manager-enabled').off('change').on('change', function() {
-        const isEnabled = $(this).is(':checked');
-        settings.isEnabled = isEnabled;
-        saveSettingsDebounced();
-        updateUIFont(); // 즉시 적용/해제
-    });
-    
     // 프리셋 드롭다운 변경 이벤트
     template.find('#preset-dropdown').off('change').on('change', function() {
         const presetId = $(this).val();
@@ -992,24 +964,17 @@ function setupEventListeners(template) {
                 id: generateId(),
                 name: presetName,
                 uiFont: null,
-                messageFont: null,
-                uiFontSize: settings.uiFontSize,
-                uiFontWeight: settings.uiFontWeight,
-                chatFontSize: settings.chatFontSize,
-                inputFontSize: settings.inputFontSize,
-                chatFontWeight: settings.chatFontWeight,
-                chatLineHeight: settings.chatLineHeight
+                messageFont: null
             };
             
-            // 프리셋 추가
-            settings.presets.push(newPreset);
+                         // 프리셋 추가
+             settings.presets.push(newPreset);
             selectedPresetId = newPreset.id;
             saveSettingsDebounced();
             
             renderPresetDropdown(template);
             renderUIFontSection(template);
             renderMessageFontSection(template);
-            renderThemeLinkingSection(template); // 테마연동 드롭다운 업데이트
             setupEventListeners(template);
         }
     });
