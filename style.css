@@ -66,7 +66,8 @@
 
 /* UI 폰트 섹션 */
 .ui-font-section,
-.message-font-section {
+.message-font-section,
+.theme-binding-section {
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
@@ -77,7 +78,8 @@
 }
 
 .ui-font-section h3,
-.message-font-section h3 {
+.message-font-section h3,
+.theme-binding-section h3 {
     margin: 0 0 10px 0;
     color: var(--SmartThemeBodyColor);
     font-size: calc(var(--mainFontSize) * 1.1);
@@ -568,5 +570,195 @@
         padding: 5px 12px;
         font-size: calc(var(--mainFontSize) * 0.8);
         min-width: 60px;
+    }
+}
+
+/* === 테마 연동 섹션 스타일 === */
+.theme-binding-description {
+    margin: 0 0 15px 0;
+    color: var(--SmartThemeQuoteColor);
+    font-size: calc(var(--mainFontSize) * 0.9);
+    line-height: 1.4;
+}
+
+.current-theme-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 8px 12px;
+    background-color: var(--SmartThemeBlurTintColor);
+    border-radius: 5px;
+    border: 1px solid var(--SmartThemeBorderColor);
+}
+
+.current-theme-info label {
+    font-weight: bold;
+    color: var(--SmartThemeBodyColor);
+}
+
+#current-theme-display {
+    color: var(--SmartThemeQuoteColor);
+    font-weight: bold;
+}
+
+.theme-binding-controls {
+    margin-bottom: 15px;
+}
+
+.theme-binding-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.theme-name-input,
+.theme-preset-dropdown {
+    flex: 1;
+    min-width: 150px;
+    padding: 8px 12px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black30a);
+    color: var(--SmartThemeBodyColor);
+    font-family: inherit;
+    font-size: calc(var(--mainFontSize) * 0.9);
+}
+
+.theme-name-input:focus,
+.theme-preset-dropdown:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
+}
+
+.theme-binding-btn {
+    padding: 8px 12px;
+    background-color: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    color: var(--SmartThemeQuoteColor);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    min-width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-binding-btn:hover {
+    background-color: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeBodyColor);
+    transform: scale(1.05);
+}
+
+.theme-bindings-list {
+    margin-bottom: 15px;
+}
+
+.theme-binding-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    background-color: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    transition: background-color 0.2s ease;
+}
+
+.theme-binding-item:hover {
+    background-color: var(--black30a);
+}
+
+.theme-binding-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.theme-binding-theme {
+    font-weight: bold;
+    color: var(--SmartThemeBodyColor);
+    min-width: 100px;
+}
+
+.theme-binding-arrow {
+    color: var(--SmartThemeQuoteColor);
+    font-size: 16px;
+}
+
+.theme-binding-preset {
+    color: var(--SmartThemeQuoteColor);
+    flex: 1;
+}
+
+.theme-binding-remove {
+    padding: 6px 8px;
+    background-color: transparent;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 3px;
+    color: var(--SmartThemeQuoteColor);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+}
+
+.theme-binding-remove:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.theme-binding-help {
+    text-align: center;
+    color: var(--SmartThemeQuoteColor);
+    font-style: italic;
+    margin-top: 10px;
+}
+
+.no-theme-bindings {
+    text-align: center;
+    color: var(--SmartThemeQuoteColor);
+    font-style: italic;
+    padding: 20px;
+    border: 1px dashed var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black30a);
+}
+
+/* 테마 연동 반응형 */
+@media (max-width: 600px) {
+    .theme-binding-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .theme-name-input,
+    .theme-preset-dropdown {
+        min-width: auto;
+    }
+    
+    .theme-binding-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .theme-binding-info {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .current-theme-info {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 5px;
     }
 } 
