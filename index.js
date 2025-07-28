@@ -723,9 +723,9 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 폰트가 선택되지 않았어도 조절값은 적용
+        // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
         uiFontCss.push(`
-/* UI FONT SIZE/WEIGHT APPLICATION - Font Manager Override */
+/* UI FONT SIZE/WEIGHT APPLICATION - Font Manager Override (Default Font) */
 html body,
 html body input,
 html body select,
@@ -734,6 +734,7 @@ html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
+  font-family: initial !important;
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
@@ -769,16 +770,18 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 폰트가 선택되지 않았어도 조절값은 적용
+        // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
         uiFontCss.push(`
-/* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override */
+/* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override (Default Font) */
 .mes * {
+  font-family: initial !important;
   font-size: var(--font-manager-chat-size) !important;
   line-height: var(--font-manager-chat-line-height) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
 
 #send_form textarea {
+  font-family: initial !important;
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
