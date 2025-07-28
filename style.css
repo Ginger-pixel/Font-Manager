@@ -195,51 +195,9 @@
     gap: 5px;
 }
 
-.color-picker-button {
-    width: 35px;
-    height: 26px;
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 3px;
-    background: #ffffff;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-}
-
-.color-picker-button:hover {
-    border-color: var(--SmartThemeQuoteColor);
-    transform: scale(1.05);
-}
-
-.color-picker-button::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 16px;
-    height: 16px;
-    background: inherit;
-    border: 1px solid rgba(0,0,0,0.1);
-    border-radius: 2px;
-    transform: translate(-50%, -50%);
-}
-
-/* Vanilla Picker 스타일 오버라이드 */
-.picker_wrapper {
-    z-index: 10000 !important;
-}
-
-.picker_sl {
-    border-radius: 4px !important;
-}
-
-.picker_hue {
-    border-radius: 4px !important;
-}
-
 .color-hash {
     color: var(--SmartThemeBodyColor);
-    font-size: calc(var(--mainFontSize) * 0.8);
+    font-size: calc(var(--mainFontSize) * 0.9);
     font-weight: 600;
     min-width: 12px;
 }
@@ -253,8 +211,29 @@
     font-family: 'Courier New', monospace;
     font-size: calc(var(--mainFontSize) * 0.85);
     text-transform: uppercase;
-    width: 70px;
+    width: 120px;
     transition: all 0.2s ease;
+}
+
+.color-preview {
+    width: 30px;
+    height: 26px;
+    border: 2px solid var(--SmartThemeBorderColor);
+    border-radius: 3px;
+    background-color: transparent;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.color-preview:empty:before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 20px;
+    height: 2px;
+    background-color: var(--SmartThemeBorderColor);
 }
 
 .color-input:focus {
@@ -534,19 +513,14 @@
         font-size: calc(var(--mainFontSize) * 0.8);
     }
     
-    .color-picker-button {
-        width: 30px;
-        height: 22px;
-    }
-    
-    .color-hash {
-        font-size: calc(var(--mainFontSize) * 0.75);
-        min-width: 10px;
-    }
-    
     .color-input {
-        width: 80px;
+        width: 100px;
         font-size: calc(var(--mainFontSize) * 0.8);
+    }
+    
+    .color-preview {
+        width: 25px;
+        height: 22px;
     }
 }
 
@@ -584,19 +558,14 @@
         gap: 3px;
     }
     
-    .color-picker-button {
-        width: 25px;
-        height: 20px;
-    }
-    
-    .color-hash {
-        font-size: calc(var(--mainFontSize) * 0.7);
-        min-width: 8px;
-    }
-    
     .color-input {
-        width: 70px;
+        width: 80px;
         font-size: calc(var(--mainFontSize) * 0.75);
         padding: 4px 6px;
+    }
+    
+    .color-preview {
+        width: 20px;
+        height: 20px;
     }
 } 
