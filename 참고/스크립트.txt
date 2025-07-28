@@ -1,0 +1,3994 @@
+'use strict';
+
+// Font Management Script
+
+// ========= Document Context =========
+let docContext = document;
+if (window.parent && window.parent.document && window.parent.document !== document) {
+    docContext = window.parent.document;
+    console.log('Font Manager: Operating in parent document context.');
+} else {
+    console.log('Font Manager: Operating in current document context.');
+}
+
+// ========= DOM IDs & ClassNames =========
+const STYLE_ID = 'font-manager-styles';
+const MODAL_ID = 'fontManagerModal';
+const MODAL_CLASS_NAME = 'font-manager-modal-dialog';
+const MODAL_CONTENT_CLASS = 'font-manager-modal-content';
+const MODAL_HEADER_CLASS = 'font-manager-modal-header';
+const MODAL_TITLE_CLASS = 'font-manager-modal-title';
+const MODAL_CLOSE_X_CLASS = 'font-manager-modal-close-x';
+const MODAL_BODY_CLASS = 'font-manager-modal-body';
+const MODAL_FOOTER_CLASS = 'font-manager-modal-footer';
+const CSS_INPUT_ID = 'fontManagerCssInput';
+const MENU_BUTTON_ID = 'fontManagerMenuButton';
+const LOCAL_STORAGE_KEY_FONTS = 'fontManagerImportedFonts';
+const LOCAL_STORAGE_KEY_FONT_IMPORT_URLS = 'fontManagerFontImportUrls';
+const LOCAL_STORAGE_KEY_ACTIVE_FONT = 'fontManagerActiveFont';
+const LOCAL_STORAGE_KEY_GLOBAL_FONT_SIZE = 'fontManagerGlobalFontSize';
+const LOCAL_STORAGE_KEY_GLOBAL_FONT_WEIGHT = 'fontManagerGlobalFontWeight';
+const LOCAL_STORAGE_KEY_AI_MESSAGE_SCALE = 'fontManagerAiMessageScale';
+const LOCAL_STORAGE_KEY_FONT_PRESETS = 'fontManagerFontPresets';
+const LOCAL_STORAGE_KEY_AUTO_PRESET_RULES = 'fontManagerAutoPresetRules';
+const LOCAL_STORAGE_KEY_AUTO_PRESET_ENABLED = 'fontManagerAutoPresetEnabled';
+
+// ========= 간소화 버전: 다국어 폰트 꾸미기 관련 상수 =========
+const LOCAL_STORAGE_KEY_MULTILANG_FONTS = 'fontManagerMultilangFonts';
+const LOCAL_STORAGE_KEY_MULTILANG_ENABLED = 'fontManagerMultilangEnabled';
+const MULTILANG_STYLE_ID = 'font-manager-multilang-styles';
+
+// IndexedDB 관련 상수
+const INDEXED_DB_NAME = 'fontManagerDB';
+const INDEXED_DB_VERSION = 1;
+const FONT_STORE_NAME = 'localFonts';
+
+const FONT_PACK_VERSION = "1.3.1"; // Version bump for size limit refinement
+
+// ========= 색상 처리 보조 함수 =========
+function hexToRgb(hex) {
+    if (!hex) return null;
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+function parseColor(colorString, fallback = 'rgba(0,0,0,1)') {
+    if (colorString && typeof colorString === 'string') {
+        let match = colorString.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/);
+        if (match) {
+            return {
+                r: parseInt(match[1]),
+                g: parseInt(match[2]),
+                b: parseInt(match[3]),
+                a: match[5] !== undefined ? parseFloat(match[5]) : 1,
+            };
+        }
+        const rgb = hexToRgb(colorString);
+        if (rgb) {
+            return { ...rgb, a: 1 };
+        }
+    }
+
+    if (fallback && typeof fallback === 'string') {
+        let fallbackMatch = fallback.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/);
+        if (fallbackMatch) {
+             return {
+                r: parseInt(fallbackMatch[1]),
+                g: parseInt(fallbackMatch[2]),
+                b: parseInt(fallbackMatch[3]),
+                a: fallbackMatch[5] !== undefined ? parseFloat(fallbackMatch[5]) : 1,
+            };
+        }
+        const fallbackRgb = hexToRgb(fallback);
+        if (fallbackRgb) {
+            return { ...fallbackRgb, a: 1 };
+        }
+    }
+    
+    console.warn(`폰트 관리자: "${colorString}" 색상 또는 대체 색상 "${fallback}"을(를) 파싱할 수 없습니다. 절대 기본값을 사용합니다.`);
+    return { r: 0, g: 0, b: 0, a: 1 };
+}
+
+
+// ========= 전역 UI 보조 함수 =========
+function createFormRow(labelText, inputElement) {
+    const row = docContext.createElement('div');
+    row.style.marginBottom = '8px';
+    const label = docContext.createElement('label');
+    label.textContent = labelText;
+    label.style.display = 'block';
+    label.style.marginBottom = '3px';
+    label.style.fontSize = '13px';
+    row.appendChild(label);
+    inputElement.style.width = 'calc(100% - 12px)';
+    inputElement.style.padding = '6px';
+    inputElement.style.backgroundColor = '#333';
+    inputElement.style.color = '#ddd';
+    inputElement.style.border = '1px solid #555';
+    inputElement.style.borderRadius = '3px';
+    row.appendChild(inputElement);
+    return row;
+}
+
+function createInput(type, id, placeholder) {
+    const input = docContext.createElement('input');
+    input.type = type;
+    input.id = id;
+    input.placeholder = placeholder || '';
+    return input;
+}
+
+function createSelect(id, optionsArray) {
+    const select = docContext.createElement('select');
+    select.id = id;
+    optionsArray.forEach(opt => {
+        const option = docContext.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.text;
+        if (opt.disabled) option.disabled = true;
+        if (opt.selected) option.selected = true;
+        select.appendChild(option);
+    });
+    return select;
+}
+
+function createOption(text, value, disabled = false, selected = false) {
+    const option = docContext.createElement('option');
+    option.textContent = text;
+    option.value = value;
+    if (disabled) option.disabled = true;
+    if (selected) option.selected = true;
+    return option;
+}
+// ========= 전역 UI 보조 함수 종료 =========
+
+// ========= 간소화 버전: 다국어 폰트 꾸미기 설정 =========
+const languageTypes = {
+    emoji: {
+        label: 'Emoji',
+        stateKey: 'emojiFontFamily',
+        urlKey: 'emojiFontUrl',
+        lsKey: 'fontManagerEmojiFontFamily',
+        lsUrlKey: 'fontManagerEmojiFontUrl',
+        cssClass: 'fm-emoji-text',
+        inputId: 'emojiFontSelector',
+        urlInputId: 'emojiFontUrlInput',
+        unicodeRange: 'U+1F600-1F64F, U+1F300-1F5FF, U+1F680-1F6FF, U+2600-26FF, U+2700-27BF, U+1F900-1F9FF'
+    },
+    korean: {
+        label: '한국어 폰트',
+        stateKey: 'koreanFontFamily',
+        urlKey: 'koreanFontUrl',
+        lsKey: 'fontManagerKoreanFontFamily',
+        lsUrlKey: 'fontManagerKoreanFontUrl',
+        inputId: 'koreanFontSelector',
+        urlInputId: 'koreanFontUrlInput',
+        unicodeRange: 'U+AC00-D7AF, U+1100-11FF, U+3130-318F, U+3200-32FF'
+    },
+    chinese: {
+        label: '중국어 폰트',
+        stateKey: 'chineseFontFamily',
+        urlKey: 'chineseFontUrl',
+        lsKey: 'fontManagerChineseFontFamily',
+        lsUrlKey: 'fontManagerChineseFontUrl',
+        inputId: 'chineseFontSelector',
+        urlInputId: 'chineseFontUrlInput',
+        unicodeRange: 'U+4E00-9FFF, U+3400-4DBF, U+20000-2A6DF, U+2A700-2B73F, U+2B740-2B81F, U+3000-303F, U+FF00-FFEF'
+    },
+    english: {
+        label: '영어 폰트',
+        stateKey: 'englishFontFamily',
+        urlKey: 'englishFontUrl',
+        lsKey: 'fontManagerEnglishFontFamily',
+        lsUrlKey: 'fontManagerEnglishFontUrl',
+        inputId: 'englishFontSelector',
+        urlInputId: 'englishFontUrlInput',
+        unicodeRange: 'U+0000-00FF, U+0100-017F, U+0180-024F, U+2000-206F, U+20A0-20CF'
+    },
+    japanese: {
+        label: '일본어 폰트',
+        stateKey: 'japaneseFontFamily',
+        urlKey: 'japaneseFontUrl',
+        lsKey: 'fontManagerJapaneseFontFamily',
+        lsUrlKey: 'fontManagerJapaneseFontUrl',
+        inputId: 'japaneseFontSelector',
+        urlInputId: 'japaneseFontUrlInput',
+        unicodeRange: 'U+3040-309F, U+30A0-30FF, U+31F0-31FF, U+4E00-9FFF'
+    }
+};
+// 폰트 출처 표시 함수
+function getFontDisplayName(fontName, isFromImport = false, isFromTTF = false) {
+    if (!fontName) return fontName;
+
+    if (isFromTTF) {
+        return `${fontName} [TTF]`;
+    } else if (isFromImport) {
+        return `${fontName} [Import]`;
+    }
+    return fontName;
+}
+
+// 폰트 출처 감지 함수
+function detectFontSource(fontName) {
+    const isLocalFont = state.localFonts.some(font => font.fontName === fontName);
+    if (isLocalFont) return 'TTF';
+
+    // @import 폰트인지 확인 (감지 로직 수정)
+    const isImportFont = state.fontImportUrls.some(url => {
+        return url.toLowerCase().includes(fontName.toLowerCase());
+    });
+    if (isImportFont) return 'Import';
+
+    return 'System';
+}
+
+
+
+
+// ========= 알림 시스템 함수 =========
+function showNotification(message, type = 'info', title = '') {
+    // toastr 사용 가능 여부 확인 (SillyTavern의 알림 시스템)
+    if (typeof toastr !== 'undefined') {
+        const options = {
+            timeOut: 4000,
+            extendedTimeOut: 1000,
+            positionClass: 'toast-top-center'
+        };
+
+        switch (type) {
+            case 'success':
+                toastr.success(message, title, options);
+                break;
+            case 'error':
+                toastr.error(message, title, options);
+                break;
+            case 'warning':
+                toastr.warning(message, title, options);
+                break;
+            case 'info':
+            default:
+                toastr.info(message, title, options);
+                break;
+        }
+    } else {
+        // 기본 alert로 대체
+        const fullMessage = title ? `${title}\n\n${message}` : message;
+        alert(fullMessage);
+    }
+}
+
+function showConfirmation(message, title = '작업 확인') {
+    // 확인 대화 상자는 기본 confirm 사용
+    const fullMessage = title ? `${title}\n\n${message}` : message;
+    return confirm(fullMessage);
+}
+
+// ========= State =========
+let modalElement = null;
+let modalDialogElement = null;
+let modalTitleElement = null;
+let modalBodyElement = null;
+let modalFooterElement = null;
+const state = {
+    importedFontFamilies: [],
+    fontImportUrls: [],
+    activeFont: null,
+    globalFontSize: null,
+    globalFontWeight: null,
+    localFonts: [],
+    // ========= 간소화 버전: 다국어 폰트 꾸미기 상태 =========
+    multilangEnabled: false,
+    koreanFontFamily: null,
+    koreanFontUrl: null,
+    chineseFontFamily: null,
+    chineseFontUrl: null,
+    japaneseFontFamily: null,
+    japaneseFontUrl: null,
+    englishFontFamily: null,
+    englishFontUrl: null,
+    emojiFontFamily: null,
+    emojiFontUrl: null,
+    fontPresets: [],
+    autoPresetRules: [],
+    autoPresetSwitchingEnabled: true,
+};
+
+let initialMainFontSizeFromCSS = '18px';
+let initialMainFontSizeNumber = 18;
+let initialMainFontWeightFromCSS = '400';
+let initialMainFontWeightNumber = 400;
+
+let draggedItemIndex = null;
+let themeChangeObserver = null;
+let lastAppliedPresetByAutoSwitch = null; // 마지막으로 자동 적용된 프리셋 이름을 기록하여 불필요한 중복 적용 방지
+
+// Debounce function
+function debounce(func, delay) {
+    let timeout;
+    return function (...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
+function checkAndApplyAutoPreset() {
+    if (!state.autoPresetSwitchingEnabled) {
+        console.log('Font Manager: Auto preset switching is disabled.');
+        return;
+    }
+    if (state.autoPresetRules.length === 0) {
+        // console.log('Font Manager: No auto preset rules configured.');
+        return;
+    }
+
+    const allStyleTagContent = Array.from(docContext.getElementsByTagName('style'))
+        .map(style => style.textContent || '')
+        .join('\n');
+
+    let matchedRulePresetName = null;
+    const currentBodyClasses = Array.from(docContext.body.classList);
+    const currentHtmlClasses = Array.from(docContext.documentElement.classList);
+    const activeStylesheetHrefs = Array.from(docContext.querySelectorAll('link[rel="stylesheet"][href]'))
+        .map(link => link.getAttribute('href') || '');
+
+    for (const rule of state.autoPresetRules) {
+        if (!rule.enabled) continue;
+
+        let conditionMet = false;
+        const conditionValue = rule.conditionValue ? rule.conditionValue.trim() : "";
+        if (!conditionValue) continue;
+
+        try {
+            if (rule.conditionType === 'styleContent') {
+                const regex = new RegExp(conditionValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+                if (regex.test(allStyleTagContent)) {
+                    conditionMet = true;
+                }
+            }
+            else if (rule.conditionType === 'linkHref') {
+                if (activeStylesheetHrefs.some(href => href.includes(conditionValue))) {
+                    conditionMet = true;
+                }
+            } else if (rule.conditionType === 'bodyClass') {
+                if (currentBodyClasses.includes(conditionValue)) {
+                    conditionMet = true;
+                }
+            } else if (rule.conditionType === 'htmlClass') {
+                if (currentHtmlClasses.includes(conditionValue)) {
+                    conditionMet = true;
+                }
+            }
+        } catch (e) {
+            console.error(`Font Manager: Error evaluating rule "${rule.name || rule.id}"`, e);
+            continue;
+        }
+
+
+        if (conditionMet) {
+            matchedRulePresetName = rule.presetName;
+            console.log(`Font Manager: Auto-switching rule matched: '${rule.name || rule.id}' -> preset '${matchedRulePresetName}'.`);
+            break;
+        }
+    }
+
+    if (matchedRulePresetName) {
+        if (lastAppliedPresetByAutoSwitch !== matchedRulePresetName) {
+            const presetToApply = state.fontPresets.find(p => p.name === matchedRulePresetName);
+            if (presetToApply && presetToApply.settings) {
+                applyPresetSettings(presetToApply.settings);
+                lastAppliedPresetByAutoSwitch = matchedRulePresetName;
+                showNotification(`테마에 따라 폰트 프리셋으로 자동 전환되었습니다: ${matchedRulePresetName}`, 'info', '자동 전환');
+            } else {
+                console.warn(`폰트 관리자: 자동 전환에 일치하는 프리셋 '${matchedRulePresetName}'을(를) 찾았지만, 프리셋이 없거나 유효하지 않습니다.`);
+            }
+        }
+    } else {
+        lastAppliedPresetByAutoSwitch = null;
+    }
+}
+
+const debouncedCheckAndApplyAutoPreset = debounce(checkAndApplyAutoPreset, 300);
+
+function handleThemeChangeObservation(mutationsList, observer) {
+    let relevantChangeDetected = false;
+    for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+            relevantChangeDetected = true;
+            break;
+        }
+        if (mutation.type === 'attributes') {
+            if (mutation.attributeName === 'href' || mutation.attributeName === 'class') {
+                relevantChangeDetected = true;
+                break;
+            }
+        }
+    }
+    if (relevantChangeDetected) {
+        debouncedCheckAndApplyAutoPreset();
+    }
+}
+
+function setupThemeChangeObserver() {
+    if (themeChangeObserver) {
+        themeChangeObserver.disconnect();
+    }
+    const observerConfig = {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['href', 'class'],
+        characterData: true
+    };
+
+    themeChangeObserver = new MutationObserver(handleThemeChangeObservation);
+
+    if (docContext.head) {
+        themeChangeObserver.observe(docContext.head, observerConfig);
+    }
+    if (docContext.body) {
+        themeChangeObserver.observe(docContext.body, { attributes: true, attributeFilter: ['class'] });
+    }
+    if (docContext.documentElement) {
+        themeChangeObserver.observe(docContext.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    console.log('Font Manager: Theme change observer set up.');
+    debouncedCheckAndApplyAutoPreset();
+}
+// ========= IndexedDB 관련 함수 =========
+function initializeIndexedDB() {
+    return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+            console.error('폰트 관리자: 브라우저가 IndexedDB를 지원하지 않아 로컬 폰트를 영구적으로 저장할 수 없습니다.');
+            reject('브라우저가 IndexedDB를 지원하지 않습니다');
+            return;
+        }
+
+        const request = indexedDB.open(INDEXED_DB_NAME, INDEXED_DB_VERSION);
+
+        request.onerror = function (event) {
+            console.error('폰트 관리자: IndexedDB 열기 실패:', event.target.error);
+            reject(event.target.error);
+        };
+
+        request.onupgradeneeded = function (event) {
+            const db = event.target.result;
+
+            if (!db.objectStoreNames.contains(FONT_STORE_NAME)) {
+                const store = db.createObjectStore(FONT_STORE_NAME, { keyPath: 'fontName' });
+                store.createIndex('fontName', 'fontName', { unique: true });
+                store.createIndex('dateAdded', 'dateAdded', { unique: false });
+                console.log('폰트 관리자: 폰트 데이터 저장소를 생성했습니다.');
+            }
+        };
+
+        request.onsuccess = function (event) {
+            const db = event.target.result;
+            console.log('폰트 관리자: IndexedDB를 성공적으로 열었습니다.');
+            resolve(db);
+        };
+    });
+}
+
+function saveLocalFontToIndexedDB(fontName, fontDataUrl, fileName) {
+    return new Promise((resolve, reject) => {
+        initializeIndexedDB().then(db => {
+            const transaction = db.transaction([FONT_STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(FONT_STORE_NAME);
+
+            const fontData = {
+                fontName: fontName,
+                fontDataUrl: fontDataUrl,
+                fileName: fileName,
+                dateAdded: new Date().toISOString()
+            };
+
+            const request = store.put(fontData);
+
+            request.onsuccess = function () {
+                console.log(`폰트 관리자: 로컬 폰트 \"${fontName}\"을(를) IndexedDB에 성공적으로 저장했습니다.`);
+                resolve();
+            };
+
+            request.onerror = function (event) {
+                console.error(`폰트 관리자: 로컬 폰트 \"${fontName}\"을(를) IndexedDB에 저장하는 데 실패했습니다:`, event.target.error);
+                reject(event.target.error);
+            };
+
+            transaction.oncomplete = function () {
+                db.close();
+            };
+        }).catch(error => {
+            reject(error);
+        });
+    });
+}
+
+function loadLocalFontsFromIndexedDB() {
+    return new Promise((resolve, reject) => {
+        initializeIndexedDB().then(db => {
+            const transaction = db.transaction([FONT_STORE_NAME], 'readonly');
+            const store = transaction.objectStore(FONT_STORE_NAME);
+            const request = store.getAll();
+
+            request.onsuccess = function () {
+                const fonts = request.result;
+                console.log(`폰트 관리자: IndexedDB에서 ${fonts.length}개의 로컬 폰트를 로드했습니다.`);
+                state.localFonts = fonts;
+                resolve(fonts);
+            };
+
+            request.onerror = function (event) {
+                console.error('폰트 관리자: IndexedDB에서 폰트를 로드하는 데 실패했습니다:', event.target.error);
+                reject(event.target.error);
+            };
+
+            transaction.oncomplete = function () {
+                db.close();
+            };
+        }).catch(error => {
+            reject(error);
+        });
+    });
+}
+
+function applyLocalFontsToPage() {
+    if (!state.localFonts || state.localFonts.length === 0) {
+        console.log('폰트 관리자: 적용할 로컬 폰트가 없습니다.');
+        return;
+    }
+
+    console.log(`폰트 관리자: 페이지에 ${state.localFonts.length}개의 로컬 폰트 적용을 시작합니다.`);
+
+    state.localFonts.forEach((fontData, index) => {
+        if (!fontData.fontName || !fontData.fontDataUrl) {
+            console.error(`폰트 관리자: 로컬 폰트 데이터가 불완전하여 적용을 건너뜁니다:`, fontData);
+            return;
+        }
+
+        const fontStyleId = `font-manager-local-font-${fontData.fontName.replace(/\s+/g, '-')}`;
+        if (docContext.getElementById(fontStyleId)) {
+            console.log(`폰트 관리자: 로컬 폰트 \"${fontData.fontName}\"이(가) 이미 적용되어 건너뜁니다.`);
+            return;
+        }
+
+        try {
+            const styleElement = docContext.createElement('style');
+            styleElement.id = fontStyleId;
+            styleElement.textContent = `
+                @font-face {
+                    font-family: '${fontData.fontName}';
+                    src: url('${fontData.fontDataUrl}') format('truetype');
+                    font-display: swap;
+                }
+            `;
+            docContext.head.appendChild(styleElement);
+
+            if (!state.importedFontFamilies.includes(fontData.fontName)) {
+                state.importedFontFamilies.push(fontData.fontName);
+                saveFontsToStorage();
+            }
+
+            console.log(`폰트 관리자: 로컬 폰트 \"${fontData.fontName}\"(${index + 1}/${state.localFonts.length})을(를) 페이지에 성공적으로 적용했습니다.`);
+        } catch (err) {
+            console.error(`폰트 관리자: 로컬 폰트 \"${fontData.fontName}\" 적용 실패:`, err);
+        }
+    });
+
+    console.log(`폰트 관리자: 로컬 폰트 적용 완료, 총 ${state.localFonts.length}개`);
+}
+
+function deleteLocalFontFromIndexedDB(fontName) {
+    return new Promise((resolve, reject) => {
+        initializeIndexedDB().then(db => {
+            const transaction = db.transaction([FONT_STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(FONT_STORE_NAME);
+
+            const request = store.delete(fontName);
+
+            request.onsuccess = function () {
+                console.log(`폰트 관리자: IndexedDB에서 로컬 폰트 \"${fontName}\"을(를) 성공적으로 삭제했습니다.`);
+
+                state.localFonts = state.localFonts.filter(font => font.fontName !== fontName);
+
+                const styleElement = docContext.getElementById(`font-manager-local-font-${fontName.replace(/\s+/g, '-')}`);
+                if (styleElement) {
+                    styleElement.remove();
+                }
+
+                resolve();
+            };
+
+            request.onerror = function (event) {
+                console.error(`폰트 관리자: IndexedDB에서 로컬 폰트 \"${fontName}\"을(를) 삭제하는 데 실패했습니다:`, event.target.error);
+                reject(event.target.error);
+            };
+
+            transaction.oncomplete = function () {
+                db.close();
+            };
+        }).catch(error => {
+            reject(error);
+        });
+    });
+}
+
+// ========= 간소화 버전: 다국어 폰트 꾸미기 기능 =========
+
+// 다국어 폰트 CSS 생성 (간소화 버전)
+function generateMultilangCSS() {
+    if (!state.multilangEnabled) return '';
+
+    let css = '';
+    const fontFamilyList = [];
+
+    // 각 언어에 대한 폰트 처리
+    Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+        const fontFamily = state[langConfig.stateKey];
+        const fontUrl = state[langConfig.urlKey];
+
+        if (fontFamily && fontFamily.trim()) {
+            let actualFontName = fontFamily;
+
+            // 경우 1: 사용자가 폰트 URL을 제공한 경우, 사용자 정의 @font-face 규칙 생성
+            if (fontUrl && fontUrl.trim()) {
+                const uniqueFontName = `MultiLang-${langKey}-${fontFamily.replace(/\s+/g, '')}`;
+                actualFontName = uniqueFontName;
+
+                css += `
+                @font-face {
+                    font-family: '${uniqueFontName}';
+                    src: url('${fontUrl}') format('truetype');
+                    unicode-range: ${langConfig.unicodeRange};
+                    font-display: swap;
+                }
+                `;
+                console.log(`다국어 폰트: ${langConfig.label}에 대한 @font-face 규칙 생성, 폰트 이름: ${uniqueFontName}`);
+            }
+            // 경우 2: 로컬 TTF 폰트인지 확인
+            else {
+                const localFont = state.localFonts.find(font => font.fontName === fontFamily);
+                if (localFont && localFont.fontDataUrl) {
+                    const uniqueFontName = `MultiLang-${langKey}-${fontFamily.replace(/\s+/g, '')}`;
+                    actualFontName = uniqueFontName;
+
+                    css += `
+                    @font-face {
+                        font-family: '${uniqueFontName}';
+                        src: url('${localFont.fontDataUrl}') format('truetype');
+                        unicode-range: ${langConfig.unicodeRange};
+                        font-display: swap;
+                    }
+                    `;
+                    console.log(`다국어 폰트: ${langConfig.label}에 로컬 TTF 폰트 사용, 폰트 이름: ${uniqueFontName}`);
+                } else {
+                    // 경우 3: 시스템 폰트 또는 @import로 가져온 폰트로 가정
+                    console.log(`다국어 폰트: ${langConfig.label}에 폰트 이름 직접 사용: ${fontFamily} (시스템 폰트 또는 이미 가져온 폰트로 가정)`);
+                }
+            }
+
+            fontFamilyList.push(`"${actualFontName}"`);
+        }
+    });
+
+    // 페이지 요소에 폰트 적용
+    if (fontFamilyList.length > 0) {
+        css += `
+        /* 전역 폰트 적용 - 다국어 모드 */
+        body, .mes_text, #chat, .message, 
+        *:not([class*="fa-"]):not([class*="icon"]):not([class*="material"]) {
+            font-family: ${fontFamilyList.join(', ')}, sans-serif !important;
+        }
+        
+        /* 코드 영역은 고정폭 폰트를 유지하지만 다국어도 지원 */
+        code, pre, .hljs {
+            font-family: ${fontFamilyList.join(', ')}, 'Consolas', 'Monaco', monospace !important;
+        }
+        `;
+    }
+
+    return css;
+}
+
+// 다국어 폰트 CSS 적용 (간소화 버전)
+function applyMultilangCSS() {
+    let styleElement = docContext.getElementById(MULTILANG_STYLE_ID);
+
+    if (!state.multilangEnabled) {
+        if (styleElement) {
+            styleElement.remove();
+            console.log('폰트 관리자: 다국어 폰트 설정이 비활성화되었습니다.');
+        }
+        return;
+    }
+
+    const css = generateMultilangCSS();
+
+    if (!styleElement) {
+        styleElement = docContext.createElement('style');
+        styleElement.id = MULTILANG_STYLE_ID;
+        docContext.head.appendChild(styleElement);
+    }
+
+    styleElement.textContent = css;
+    console.log('폰트 관리자: 다국어 폰트 CSS가 적용되었습니다.');
+}
+
+// 다국어 설정을 localStorage에 저장
+function saveMultilangSettings() {
+    try {
+        const settings = {
+            enabled: state.multilangEnabled,
+            fonts: {},
+            urls: {}
+        };
+
+        Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+            settings.fonts[langKey] = state[langConfig.stateKey];
+            settings.urls[langKey] = state[langConfig.urlKey];
+        });
+
+        localStorage.setItem(LOCAL_STORAGE_KEY_MULTILANG_FONTS, JSON.stringify(settings));
+        console.log('폰트 관리자: 다국어 설정이 저장되었습니다.');
+    } catch (error) {
+        console.error('폰트 관리자: 다국어 설정 저장 실패:', error);
+    }
+}
+
+// localStorage에서 다국어 설정 로드
+function loadMultilangSettings() {
+    try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY_MULTILANG_FONTS);
+        if (saved) {
+            const settings = JSON.parse(saved);
+            // Ensure settings is a valid object before proceeding
+            if (settings && typeof settings === 'object' && settings.fonts && settings.urls) {
+                state.multilangEnabled = settings.enabled || false;
+
+                Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+                    state[langConfig.stateKey] = settings.fonts[langKey] || null;
+                    state[langConfig.urlKey] = settings.urls[langKey] || null;
+                });
+
+                console.log('폰트 관리자: 다국어 설정이 로드되었습니다.');
+            } else {
+                 console.warn('Font Manager: Corrupted multilang settings found in localStorage. Resetting.');
+                 state.multilangEnabled = false;
+            }
+        }
+    } catch (error) {
+        console.error('폰트 관리자: 다국어 설정 로드 실패:', error);
+        // Reset to default state on error
+        state.multilangEnabled = false;
+    }
+}
+
+/**
+ * 현재 모든 관련 폰트 설정을 가져와 프리셋으로 저장
+ */
+function getCurrentFontSettingsAsPresetData() {
+    const presetData = {
+        activeFont: state.activeFont,
+        multilangEnabled: state.multilangEnabled,
+        multilangFonts: {},
+        hljsFontFamily: state.hljsFontFamily,
+        mesCodeFontFamily: state.mesCodeFontFamily,
+    };
+
+    Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+        presetData.multilangFonts[langKey] = {
+            fontFamily: state[langConfig.stateKey],
+            fontUrl: state[langConfig.urlKey]
+        };
+    });
+
+    return presetData;
+}
+
+/**
+ * 프리셋 객체의 폰트 설정을 적용
+ * @param {object} presetSettings - 프리셋에서 가져온 폰트 설정 객체
+ */
+function applyPresetSettings(presetSettings) {
+    if (!presetSettings) {
+        console.error("Font Manager: applyPresetSettings called with invalid settings.");
+        return;
+    }
+
+    state.multilangEnabled = presetSettings.multilangEnabled || false;
+    if (presetSettings.multilangFonts) {
+        Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+            const langPreset = presetSettings.multilangFonts[langKey];
+            if (langPreset) {
+                state[langConfig.stateKey] = langPreset.fontFamily || null;
+                state[langConfig.urlKey] = langPreset.fontUrl || null;
+            } else {
+                state[langConfig.stateKey] = null;
+                state[langConfig.urlKey] = null;
+            }
+        });
+    }
+    saveMultilangSettings();
+    applyMultilangCSS();
+
+    if (presetSettings.activeFont) {
+        applyFontToBody(presetSettings.activeFont);
+    } else if (!state.multilangEnabled) {
+        resetToDefaultFont();
+    }
+
+    if (presetSettings.hljsFontFamily !== undefined) {
+        applyHljsFontFamily(presetSettings.hljsFontFamily);
+    }
+
+    if (presetSettings.mesCodeFontFamily !== undefined) {
+        applyMesCodeFontFamily(presetSettings.mesCodeFontFamily);
+    }
+
+    console.log("Font Manager: Preset settings applied.", presetSettings);
+    renderCombinedMainView();
+    showNotification('폰트 프리셋이 적용되었습니다!');
+}
+
+// 폰트 프리셋을 localStorage에 저장
+function saveFontPresetsToStorage() {
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_FONT_PRESETS, JSON.stringify(state.fontPresets));
+        console.log('Font Manager: Font presets saved to localStorage.');
+    } catch (error) {
+        console.error('Font Manager: Error saving font presets to localStorage:', error);
+    }
+}
+
+// localStorage에서 폰트 프리셋 로드
+function loadFontPresetsFromStorage() {
+    try {
+        const storedPresets = localStorage.getItem(LOCAL_STORAGE_KEY_FONT_PRESETS);
+        if (storedPresets) {
+            const parsedData = JSON.parse(storedPresets);
+            // Ensure the loaded data is an array before assigning it
+            if (Array.isArray(parsedData)) {
+                state.fontPresets = parsedData;
+                console.log('Font Manager: Font presets loaded from localStorage.', state.fontPresets);
+            } else {
+                console.warn('Font Manager: Corrupted font presets data in localStorage. Resetting.');
+                state.fontPresets = [];
+            }
+        } else {
+            state.fontPresets = [];
+            console.log('Font Manager: No font presets found in localStorage.');
+        }
+    } catch (error) {
+        console.error('Font Manager: Error loading font presets from localStorage:', error);
+        state.fontPresets = [];
+    }
+}
+
+// 자동 전환 규칙을 localStorage에 저장
+function saveAutoPresetRulesToStorage() {
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_AUTO_PRESET_RULES, JSON.stringify(state.autoPresetRules));
+        console.log('Font Manager: Auto preset rules saved to localStorage.');
+    } catch (error) {
+        console.error('Font Manager: Error saving auto preset rules to localStorage:', error);
+    }
+}
+
+// localStorage에서 자동 전환 규칙 로드
+function loadAutoPresetRulesFromStorage() {
+    try {
+        const storedRules = localStorage.getItem(LOCAL_STORAGE_KEY_AUTO_PRESET_RULES);
+        if (storedRules) {
+            const parsedData = JSON.parse(storedRules);
+            // Ensure the loaded data is an array before assigning it
+            if (Array.isArray(parsedData)) {
+                // Proactively assign unique IDs to any rules that don't have one for backward compatibility.
+                let rulesPatched = false;
+                state.autoPresetRules = parsedData.map(rule => {
+                    if (!rule.id) {
+                        rule.id = `rule-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+                        rulesPatched = true;
+                    }
+                    return rule;
+                });
+
+                if (rulesPatched) {
+                    console.log('Font Manager: Patched auto preset rules with missing IDs.');
+                    saveAutoPresetRulesToStorage(); // Save the patched rules back to storage.
+                }
+
+                 console.log('Font Manager: Auto preset rules loaded from localStorage.', state.autoPresetRules);
+            } else {
+                console.warn('Font Manager: Corrupted auto preset rules data in localStorage. Resetting.');
+                state.autoPresetRules = [];
+            }
+        } else {
+            state.autoPresetRules = [];
+            console.log('Font Manager: No auto preset rules found in localStorage.');
+        }
+    } catch (error) {
+        console.error('Font Manager: Error loading auto preset rules from localStorage:', error);
+        state.autoPresetRules = [];
+    }
+
+    try {
+        const storedEnabled = localStorage.getItem(LOCAL_STORAGE_KEY_AUTO_PRESET_ENABLED);
+        if (storedEnabled !== null) {
+            state.autoPresetSwitchingEnabled = JSON.parse(storedEnabled);
+        } else {
+            state.autoPresetSwitchingEnabled = true;
+        }
+        console.log('Font Manager: Auto preset switching enabled state loaded:', state.autoPresetSwitchingEnabled);
+    } catch (error) {
+        console.error('Font Manager: Error loading auto preset switching enabled state:', error);
+        state.autoPresetSwitchingEnabled = true;
+    }
+}
+
+
+// 자동 전환 전체 스위치 상태 저장
+function saveAutoPresetSwitchingEnabledToStorage() {
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_AUTO_PRESET_ENABLED, JSON.stringify(state.autoPresetSwitchingEnabled));
+        console.log('Font Manager: Auto preset switching enabled state saved.');
+    } catch (error) {
+        console.error('Font Manager: Error saving auto preset switching enabled state:', error);
+    }
+}
+
+// ========= CSS Styles String =========
+function getManagerStyles() {
+    return `
+        /* ... (이전의 모든 CSS 스타일은 그대로 유지) ... */
+        @keyframes fontManagerFadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #${MODAL_ID} {
+            display: none; 
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(3px);
+        }
+
+        .${MODAL_CLASS_NAME} {
+            background: #2c2c2e;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 600px;
+            max-width: 90%;
+            max-height: 80vh;
+            animation: fontManagerFadeIn 0.2s ease-out;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: fixed;
+            z-index: 10001;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+        
+        .${MODAL_BODY_CLASS} {
+            padding: 20px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            flex-grow: 1;
+            text-align: left;
+            box-sizing: border-box;
+            min-height: 0;
+        }
+
+        .${MODAL_HEADER_CLASS} {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #444;
+            flex-shrink: 0;
+        }
+
+        .${MODAL_TITLE_CLASS} {
+            margin: 0;
+            font-weight: 500;
+            font-size: 18px;
+        }
+
+        .${MODAL_CLOSE_X_CLASS} {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            font-size: 26px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .${MODAL_CLOSE_X_CLASS}:hover {
+            color: #fff;
+        }
+
+        .${MODAL_BODY_CLASS} p, .${MODAL_BODY_CLASS} div:not([class^='font-list']):not(.current-font-display):not(.font-manage-item):not(.multilang-section):not(.beautify-pack-item):not(.lang-font-control) {
+            color: #ccc;
+        }
+
+        .${MODAL_FOOTER_CLASS} {
+            padding: 10px 20px;
+            border-top: 1px solid #444;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .font-manager-modal-button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .font-manager-modal-button:hover {
+            background-color: #0056b3;
+        }
+        .font-manager-modal-button.close, .font-manager-modal-button.danger {
+            background-color: #dc3545;
+        }
+        .font-manager-modal-button.close:hover, .font-manager-modal-button.danger:hover {
+            background-color: #c82333;
+        }
+        .font-manager-modal-button.confirm {
+             background-color: #28a745;
+        }
+        .font-manager-modal-button.confirm:hover {
+             background-color: #218838;
+        }
+
+        #${CSS_INPUT_ID} {
+            width: calc(100% - 16px);
+            min-height: 100px;
+            margin-top: 10px;
+            margin-bottom:10px;
+            padding: 8px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            font-family: monospace;
+            resize: vertical;
+            background-color: #222;
+            color: #ddd;
+        }
+
+        .font-list-container {
+            max-height: 280px;
+            overflow-y: auto;
+            border: 1px solid #444;
+            padding: 0;
+            margin-top: 10px;
+            border-radius: 4px;
+            background-color: #222;
+            box-sizing: border-box;
+        }
+
+        .font-manage-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #38383c;
+            color: #ddd;
+            cursor: grab;
+        }
+        .font-manage-item:last-child {
+            border-bottom: none;
+        }
+
+        .font-manage-item.dragging-font-item {
+            opacity: 0.5;
+            background: #4f4f53;
+            cursor: grabbing;
+        }
+        .font-manage-item.drag-over-font-item {
+            border-top: 2px dashed #00aaff;
+        }
+       .auto-rule-item {
+           cursor: grab;
+        }
+        .auto-rule-item[style*="opacity: 0.5"] {
+            background: #4f4f53;
+            cursor: grabbing;
+        }
+        .font-manager-tutorial-button {
+            background-color: #4a6a8a;
+            color: #e0e0e0;
+            padding: 2px 8px;
+            font-size: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid #6a8aac;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .font-manager-tutorial-button:hover {
+            background-color: #5a7aa2;
+        }
+
+        .font-manager-tutorial-content {
+            display: none;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #1c1c1e;
+            border: 1px solid #333;
+            border-radius: 4px;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #ccc;
+        }
+        .font-manager-tutorial-content strong {
+            color: #ffc107;
+        }
+        .font-manager-tutorial-content code {
+            background-color: #111;
+            padding: 2px 5px;
+            border-radius: 3px;
+            color: #a1c659;
+            font-family: monospace;
+        }
+        .font-name-clickable {
+            flex-grow: 1;
+            cursor: pointer;
+            padding-right: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .font-name-clickable:hover {
+            color: #00aaff;
+        }
+
+        .font-item-actions {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .font-action-button {
+            background-color: #3e3e42;
+            color: #ccc;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 1.2;
+            min-width: 30px;
+            text-align: center;
+        }
+        .font-action-button:hover {
+            background-color: #4f4f53;
+            color: #fff;
+        }
+        .font-action-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .font-action-button.delete-btn {
+            background-color: #5a2d2d;
+            border-color: #7a3d3d;
+            color: #ffc0c0;
+        }
+        .font-action-button.delete-btn:hover {
+            background-color: #c82333;
+            color: #fff;
+        }
+
+        #${MENU_BUTTON_ID} i, #${MENU_BUTTON_ID} span:first-child {
+             margin-right: 1px;
+        }
+
+        .current-font-display {
+            margin-bottom: 5px;
+            padding: 10px;
+            background-color: #3a3a3c;
+            border: 1px solid #555;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #d0d0d0;
+            word-break: break-all;
+        }
+        .font-manager-modal-button.reset-default-btn {
+            margin-bottom: 15px;
+            background-color: #6c757d;
+        }
+        .font-manager-modal-button.reset-default-btn:hover {
+            background-color: #5a6268;
+        }
+        
+        .font-manager-modal-button.small-button {
+            padding: 3px 8px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .multilang-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #2a2a2c;
+            border: 1px solid #444;
+            border-radius: 6px;
+        }
+
+        .multilang-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        .multilang-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .multilang-toggle label {
+            font-weight: 500;
+            cursor: pointer;
+            color: #e0e0e0;
+        }
+
+        .lang-font-control {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .lang-font-control label {
+            min-width: 80px;
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .lang-font-control select,
+        .lang-font-control input[type="url"] {
+            flex-grow: 1;
+            padding: 5px;
+            background-color: #333;
+            color: #ddd;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+
+        .lang-font-control input[type="url"] {
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .multilang-section > div[style*="background-color: #1e1e1e"]:hover {
+            background-color: #252525 !important;
+        }
+
+        .multilang-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .opacity-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+            margin-bottom: 8px;
+        }
+        .opacity-slider-container label {
+            min-width: 90px;
+            font-size: 13px;
+            color: #ccc;
+        }
+        .opacity-slider-container input[type="range"] {
+            flex-grow: 1;
+            margin: 0;
+        }
+        .opacity-slider-container span {
+            min-width: 35px;
+            font-family: monospace;
+            text-align: right;
+        }
+        
+        #hljs-controls-wrapper[disabled] {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .${MODAL_CLASS_NAME} {
+                width: 95%; 
+            }
+            .${MODAL_BODY_CLASS} {
+                padding: 15px;
+                padding-right: 10px;
+            }
+            #${CSS_INPUT_ID} {
+                min-height: 80px;
+                font-size: 13px;
+            }
+            .${MODAL_TITLE_CLASS} {
+                font-size: 17px;
+            }
+            .font-manager-modal-button {
+                padding: 7px 12px;
+                font-size: 13px;
+            }
+            .font-action-button {
+                padding: 3px 6px;
+                font-size: 11px;
+            }
+            .font-manage-item {
+                padding: 8px;
+            }
+            .font-name-clickable {
+                 font-size: 14px;
+            }
+            
+            .lang-font-control {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 5px;
+            }
+            
+            .lang-font-control label {
+                min-width: auto;
+            }
+            
+            .multilang-actions {
+                flex-direction: column;
+            }
+        }
+    `;
+}
+
+// ========= LocalStorage Functions =========
+function saveFontsToStorage() {
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_FONTS, JSON.stringify(state.importedFontFamilies));
+    } catch (e) {
+        console.error('Font Manager: Error saving fonts to localStorage:', e);
+    }
+}
+
+function saveFontImportUrlsToStorage() {
+    try {
+        localStorage.setItem(LOCAL_STORAGE_KEY_FONT_IMPORT_URLS, JSON.stringify(state.fontImportUrls));
+    } catch (e) {
+        console.error('Font Manager: Error saving font import URLs to localStorage:', e);
+    }
+}
+
+function loadFontsFromStorage() {
+    try {
+        const storedFonts = localStorage.getItem(LOCAL_STORAGE_KEY_FONTS);
+        if (storedFonts) {
+            const parsedData = JSON.parse(storedFonts);
+            if (Array.isArray(parsedData)) {
+                state.importedFontFamilies = parsedData;
+            } else {
+                console.warn('Font Manager: Corrupted font list in localStorage. Resetting.');
+                state.importedFontFamilies = [];
+            }
+        }
+    } catch (e) {
+        console.error('Font Manager: Error loading fonts from localStorage:', e);
+        state.importedFontFamilies = [];
+    }
+}
+
+function loadFontImportUrlsFromStorage() {
+    try {
+        const storedUrls = localStorage.getItem(LOCAL_STORAGE_KEY_FONT_IMPORT_URLS);
+        if (storedUrls) {
+            const parsedData = JSON.parse(storedUrls);
+            if (Array.isArray(parsedData)) {
+                state.fontImportUrls = parsedData;
+            } else {
+                console.warn('Font Manager: Corrupted font import URLs in localStorage. Resetting.');
+                state.fontImportUrls = [];
+            }
+        } else {
+            state.fontImportUrls = [];
+        }
+    } catch (e) {
+        console.error('Font Manager: Error loading font import URLs from localStorage:', e);
+        state.fontImportUrls = [];
+    }
+}
+
+
+// ========= UI Element Creation / Update =========
+function injectStyles() {
+    if (!docContext.getElementById(STYLE_ID)) {
+        const styleTag = docContext.createElement('style');
+        styleTag.id = STYLE_ID;
+        styleTag.innerHTML = getManagerStyles();
+        docContext.head.appendChild(styleTag);
+    }
+}
+
+function ensureModalStructure() {
+    if (docContext.getElementById(MODAL_ID)) {
+        modalElement = docContext.getElementById(MODAL_ID);
+        modalDialogElement = modalElement.querySelector('.' + MODAL_CLASS_NAME);
+        modalTitleElement = modalDialogElement.querySelector('.' + MODAL_TITLE_CLASS);
+        modalBodyElement = modalDialogElement.querySelector('.' + MODAL_BODY_CLASS);
+        modalFooterElement = modalDialogElement.querySelector('.' + MODAL_FOOTER_CLASS);
+        return;
+    }
+
+    modalElement = docContext.createElement('div');
+    modalElement.id = MODAL_ID;
+    modalElement.addEventListener('click', function (event) {
+        if (event.target === modalElement) {
+            closeModal();
+        }
+    });
+
+    modalDialogElement = docContext.createElement('div');
+    modalDialogElement.className = MODAL_CLASS_NAME;
+
+    const header = docContext.createElement('div');
+    header.className = MODAL_HEADER_CLASS;
+    modalTitleElement = docContext.createElement('h2');
+    modalTitleElement.className = MODAL_TITLE_CLASS;
+    const closeXButton = docContext.createElement('button');
+    closeXButton.className = MODAL_CLOSE_X_CLASS;
+    closeXButton.innerHTML = '&times;';
+    closeXButton.onclick = closeModal;
+    header.appendChild(modalTitleElement);
+    header.appendChild(closeXButton);
+
+    modalBodyElement = docContext.createElement('div');
+    modalBodyElement.className = MODAL_BODY_CLASS;
+
+    modalDialogElement.appendChild(header);
+    modalDialogElement.appendChild(modalBodyElement);
+
+    modalElement.appendChild(modalDialogElement);
+    docContext.body.appendChild(modalElement);
+}
+
+function _createButton(text, className, onClick) {
+    const button = docContext.createElement('button');
+    button.textContent = text;
+    button.className = 'font-manager-modal-button ' + (className || '').trim();
+    button.onclick = onClick;
+    return button;
+}
+
+function _renderFooterButtons(buttons) {
+    if (!modalDialogElement) ensureModalStructure();
+    const existingFooter = modalDialogElement.querySelector('.' + MODAL_FOOTER_CLASS);
+    if (existingFooter) existingFooter.remove();
+
+    if (buttons && buttons.length > 0) {
+        modalFooterElement = docContext.createElement('div');
+        modalFooterElement.className = MODAL_FOOTER_CLASS;
+        buttons.forEach(btnConfig => {
+            modalFooterElement.appendChild(_createButton(btnConfig.text, btnConfig.className, btnConfig.onClick));
+        });
+        modalDialogElement.appendChild(modalFooterElement);
+    }
+}
+
+function renderMultilangSection() {
+    const multilangSection = docContext.createElement('div');
+    multilangSection.className = 'multilang-section';
+
+    const multilangTitle = docContext.createElement('h4');
+    multilangTitle.textContent = '다국어 폰트 설정';
+    multilangTitle.style.marginTop = '0';
+    multilangTitle.style.marginBottom = '15px';
+    multilangSection.appendChild(multilangTitle);
+
+    const description = docContext.createElement('p');
+    description.innerHTML = '@font-face + unicode-range를 통해 정확한 다국어 폰트 지정을 구현합니다. 로컬 폰트 이름 또는 직접적인 폰트 파일 URL을 사용할 수 있습니다.<br><br>영감을 준 @Moaisha의 사계절 시리즈에 감사합니다❤️<br>2차 수정을 허락해준 @Angela에게 감사합니다❤️<br><br>⚠️ 중요 사용 설명<br>[TTF] 표시: 로컬에 업로드된 .ttf 폰트 파일<br>[Import] 표시: @import로 가져온 온라인 폰트<br>다국어 꾸미기 시에는 모두 [TTF] 폰트 사용을 권장합니다.<br>[Import] 폰트와 혼용 시 [TTF] 폰트를 덮어쓸 수 있어 일부 언어 꾸미기가 실패할 수 있습니다.<br>혼용해야 할 경우, [Import] 영어 + [TTF] 중국어 조합을 권장합니다.<br><br>';
+    description.style.fontSize = '12px';
+    description.style.color = '#aaa';
+    description.style.marginBottom = '15px';
+    multilangSection.appendChild(description);
+
+    const toggleContainer = docContext.createElement('div');
+    toggleContainer.className = 'multilang-toggle';
+
+    const toggleCheckbox = docContext.createElement('input');
+    toggleCheckbox.type = 'checkbox';
+    toggleCheckbox.id = 'multilangEnabledCheckbox';
+    toggleCheckbox.checked = state.multilangEnabled;
+
+    const toggleLabel = docContext.createElement('label');
+    toggleLabel.htmlFor = 'multilangEnabledCheckbox';
+    toggleLabel.textContent = '다국어 폰트 설정 활성화';
+
+    toggleContainer.appendChild(toggleCheckbox);
+    toggleContainer.appendChild(toggleLabel);
+    multilangSection.appendChild(toggleContainer);
+
+    const controlsContainer = docContext.createElement('div');
+    controlsContainer.id = 'multilangControls';
+    multilangSection.appendChild(controlsContainer);
+
+    function updateLanguageFontControls() {
+        controlsContainer.innerHTML = '';
+
+        if (!state.multilangEnabled) {
+            const disabledMsg = docContext.createElement('div');
+            disabledMsg.style.color = '#888';
+            disabledMsg.style.fontStyle = 'italic';
+            disabledMsg.style.textAlign = 'center';
+            disabledMsg.style.padding = '20px';
+            disabledMsg.textContent = '먼저 다국어 폰트 설정을 활성화해주세요.';
+            controlsContainer.appendChild(disabledMsg);
+            return;
+        }
+
+        Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+            const langSection = docContext.createElement('div');
+            langSection.style.marginBottom = '15px';
+            langSection.style.padding = '10px';
+            langSection.style.border = '1px solid #555';
+            langSection.style.borderRadius = '4px';
+            langSection.style.backgroundColor = '#1e1e1e';
+
+            const langTitle = docContext.createElement('h5');
+            langTitle.textContent = langConfig.label;
+            langTitle.style.marginTop = '0';
+            langTitle.style.marginBottom = '10px';
+            langTitle.style.color = '#fff';
+            langSection.appendChild(langTitle);
+
+            const unicodeInfo = docContext.createElement('div');
+            unicodeInfo.textContent = `유니코드 범위: ${langConfig.unicodeRange}`;
+            unicodeInfo.style.fontSize = '11px';
+            unicodeInfo.style.color = '#888';
+            unicodeInfo.style.marginBottom = '8px';
+            langSection.appendChild(unicodeInfo);
+
+            const controlGroup1 = docContext.createElement('div');
+            controlGroup1.className = 'lang-font-control';
+
+            const label1 = docContext.createElement('label');
+            label1.textContent = '폰트 이름:';
+
+            const select = docContext.createElement('select');
+            select.id = langConfig.inputId;
+
+            const defaultOption = docContext.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = '시스템 기본 사용';
+            select.appendChild(defaultOption);
+
+            state.importedFontFamilies.forEach(fontFamily => {
+                const option = docContext.createElement('option');
+                option.value = fontFamily;
+                option.style.fontFamily = `'${fontFamily}'`;
+
+                const isLocalFont = state.localFonts.some(font => font.fontName === fontFamily);
+                const isImportFont = state.fontImportUrls.some(url =>
+                    url.toLowerCase().includes(fontFamily.toLowerCase())
+                );
+                
+                option.textContent = getFontDisplayName(fontFamily, isImportFont, isLocalFont);
+
+                if (state[langConfig.stateKey] === fontFamily) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', (e) => {
+                state[langConfig.stateKey] = e.target.value || null;
+                saveMultilangSettings();
+            });
+
+            controlGroup1.appendChild(label1);
+            controlGroup1.appendChild(select);
+            langSection.appendChild(controlGroup1);
+
+            const controlGroup2 = docContext.createElement('div');
+            controlGroup2.className = 'lang-font-control';
+
+            const label2 = docContext.createElement('label');
+            label2.textContent = '폰트 URL:';
+
+            const urlInput = docContext.createElement('input');
+            urlInput.type = 'url';
+            urlInput.id = langConfig.urlInputId;
+            urlInput.value = state[langConfig.urlKey] || '';
+            urlInput.placeholder = '예: https://files.catbox.moe/pq0tfm.ttf';
+
+            urlInput.addEventListener('input', (e) => {
+                state[langConfig.urlKey] = e.target.value || null;
+                saveMultilangSettings();
+            });
+
+            controlGroup2.appendChild(label2);
+            controlGroup2.appendChild(urlInput);
+            langSection.appendChild(controlGroup2);
+
+            const priorityInfo = docContext.createElement('div');
+            priorityInfo.innerHTML = `
+                <div style="font-size: 11px; color: #bbb; margin-top: 5px;">
+                    <strong>사용 우선순위:</strong> 폰트 URL > 폰트 이름 > 시스템 기본<br>
+                    <strong>호환성 팁:</strong> TTF 폰트는 unicode-range 제한이 있고, Import 폰트는 일반적으로 제한이 없습니다.
+                </div>
+            `;
+            langSection.appendChild(priorityInfo);
+            controlsContainer.appendChild(langSection);
+        });
+    }
+
+    const actionsContainer = docContext.createElement('div');
+    actionsContainer.className = 'multilang-actions';
+
+    const applyButton = _createButton('설정 적용', 'font-manager-modal-button confirm', () => {
+        applyMultilangCSS();
+        showNotification('다국어 폰트 설정이 적용되었습니다!');
+    });
+
+    const resetButton = _createButton('설정 초기화', 'font-manager-modal-button danger', () => {
+        if (confirm('다국어 폰트 설정을 초기화하시겠습니까?')) {
+            Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+                state[langConfig.stateKey] = null;
+                state[langConfig.urlKey] = null;
+            });
+            state.multilangEnabled = false;
+            saveMultilangSettings();
+            applyMultilangCSS();
+            renderCombinedMainView();
+            showNotification('다국어 폰트 설정이 초기화되었습니다!');
+        }
+    });
+
+    const presetButton = _createButton('프리셋 폰트 사용', 'font-manager-modal-button', () => {
+        if (confirm('프리셋 중국어 폰트 URL을 사용하시겠습니까?\n방정송각본수해간체(方正宋刻本秀楷简体)')) {
+            state.chineseFontFamily = '方正宋刻本秀楷简体';
+            state.chineseFontUrl = 'https://sharkpan.xyz/f/8Va2Cj/%E6%96%B9%E6%AD%A3%E5%AE%8B%E5%88%BB%E6%9C%AC%E7%A7%80%E6%A5%B7%E7%AE%80%E4%BD%93.TTF';
+            saveMultilangSettings();
+            updateLanguageFontControls();
+            showNotification('프리셋 중국어 폰트가 설정되었습니다! \"설정 적용\"을 클릭하여 적용하세요.');
+        }
+    });
+
+    const presetButton2 = _createButton('프리셋 Emoji 폰트', 'font-manager-modal-button', () => {
+        if (confirm('프리셋 Emoji 폰트 URL을 사용하시겠습니까?')) {
+            state.emojiFontFamily = 'CustomEmoji';
+            state.emojiFontUrl = 'https://files.catbox.moe/sqwehz.ttf';
+            saveMultilangSettings();
+            updateLanguageFontControls();
+            showNotification('프리셋 Emoji 폰트가 설정되었습니다!');
+        }
+    });
+
+    actionsContainer.appendChild(applyButton);
+    actionsContainer.appendChild(resetButton);
+    actionsContainer.appendChild(presetButton);
+    actionsContainer.appendChild(presetButton2);
+    multilangSection.appendChild(actionsContainer);
+
+    toggleCheckbox.addEventListener('change', (e) => {
+        const wasEnabled = state.multilangEnabled;
+        state.multilangEnabled = e.target.checked;
+        saveMultilangSettings();
+
+        if (wasEnabled && !state.multilangEnabled) {
+            const currentActiveFont = localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVE_FONT);
+            if (currentActiveFont && state.importedFontFamilies.includes(currentActiveFont)) {
+                applyGlobalFontToAllElements(currentActiveFont);
+            }
+        } else if (!wasEnabled && state.multilangEnabled) {
+            const globalStyleElement = docContext.getElementById('font-manager-global-font');
+            if (globalStyleElement) {
+                globalStyleElement.textContent = '';
+            }
+        }
+
+        applyMultilangCSS();
+        updateLanguageFontControls();
+    });
+
+    updateLanguageFontControls();
+    return multilangSection;
+}
+
+function renderCombinedMainView() {
+    ensureModalStructure();
+    if (!modalBodyElement || !modalTitleElement) return;
+
+    modalTitleElement.textContent = '폰트 관리';
+    modalBodyElement.innerHTML = '';
+
+    const presetSection = docContext.createElement('div');
+    presetSection.className = 'font-preset-section';
+    presetSection.style.marginBottom = '20px';
+    presetSection.style.padding = '15px';
+    presetSection.style.backgroundColor = '#262628';
+    presetSection.style.border = '1px solid #444';
+    presetSection.style.borderRadius = '6px';
+
+    const presetTitle = docContext.createElement('h4');
+    presetTitle.textContent = '폰트 조합 프리셋';
+    presetTitle.style.marginTop = '0';
+    presetTitle.style.marginBottom = '15px';
+    presetSection.appendChild(presetTitle);
+
+    const presetSelectLabel = docContext.createElement('label');
+    presetSelectLabel.textContent = '프리셋 선택: ';
+    presetSelectLabel.htmlFor = 'fontManagerPresetSelect';
+    presetSection.appendChild(presetSelectLabel);
+
+    const presetSelect = docContext.createElement('select');
+    presetSelect.id = 'fontManagerPresetSelect';
+    presetSelect.style.marginBottom = '10px';
+    presetSelect.style.minWidth = '200px';
+    presetSelect.style.padding = '5px';
+    presetSelect.style.backgroundColor = '#333';
+    presetSelect.style.color = '#ddd';
+    presetSelect.style.border = '1px solid #555';
+
+    if (state.fontPresets.length === 0) {
+        presetSelect.appendChild(createOption('사용 가능한 프리셋이 없습니다.', '', true, true));
+    } else {
+        state.fontPresets.forEach((preset) => {
+            presetSelect.appendChild(createOption(preset.name, preset.name));
+        });
+    }
+    presetSection.appendChild(presetSelect);
+    presetSection.appendChild(docContext.createElement('br'));
+
+    const applyPresetButton = _createButton('선택한 프리셋 적용', 'confirm', handleApplySelectedPreset);
+    applyPresetButton.style.marginRight = '10px';
+    presetSection.appendChild(applyPresetButton);
+
+    const updatePresetButton = _createButton('선택한 프리셋 업데이트', '', handleUpdateSelectedPreset);
+    updatePresetButton.disabled = state.fontPresets.length === 0;
+    updatePresetButton.style.marginRight = '10px';
+    presetSection.appendChild(updatePresetButton);
+
+    const deletePresetButton = _createButton('선택한 프리셋 삭제', 'danger', handleDeleteSelectedPreset);
+    deletePresetButton.disabled = state.fontPresets.length === 0;
+    presetSection.appendChild(deletePresetButton);
+
+    presetSection.appendChild(docContext.createElement('hr'));
+    presetSection.appendChild(docContext.createElement('br'));
+
+    const newPresetNameLabel = docContext.createElement('label');
+    newPresetNameLabel.textContent = '새 프리셋 이름: ';
+    newPresetNameLabel.htmlFor = 'fontManagerNewPresetName';
+    presetSection.appendChild(newPresetNameLabel);
+
+    const newPresetNameInput = createInput('text', 'fontManagerNewPresetName', '예: 읽기 모드 폰트');
+    newPresetNameInput.style.padding = '5px';
+    newPresetNameInput.style.backgroundColor = '#333';
+    newPresetNameInput.style.color = '#ddd';
+    newPresetNameInput.style.border = '1px solid #555';
+    newPresetNameInput.style.marginRight = '10px';
+    newPresetNameInput.style.minWidth = '200px';
+    presetSection.appendChild(newPresetNameInput);
+
+    const saveNewPresetButton = _createButton('현재 설정을 새 프리셋으로 저장', '', handleSaveNewPreset);
+    presetSection.appendChild(saveNewPresetButton);
+
+    modalBodyElement.appendChild(presetSection);
+
+    const autoSwitchSection = docContext.createElement('div');
+    autoSwitchSection.className = 'auto-preset-switch-section';
+    autoSwitchSection.style.marginTop = '20px';
+    autoSwitchSection.style.marginBottom = '20px';
+    autoSwitchSection.style.padding = '15px';
+    autoSwitchSection.style.backgroundColor = '#202022';
+    autoSwitchSection.style.border = '1px solid #444';
+    autoSwitchSection.style.borderRadius = '6px';
+
+    const autoSwitchTitleContainer = docContext.createElement('div');
+    autoSwitchTitleContainer.style.display = 'flex';
+    autoSwitchTitleContainer.style.alignItems = 'center';
+    autoSwitchTitleContainer.style.marginBottom = '15px';
+
+    const autoSwitchTitle = docContext.createElement('h4');
+    autoSwitchTitle.textContent = '테마 연동 - 폰트 프리셋 자동 전환';
+    autoSwitchTitle.style.margin = '0';
+    autoSwitchTitleContainer.appendChild(autoSwitchTitle);
+
+    const tutorialButton = docContext.createElement('button');
+    tutorialButton.textContent = '튜토리얼 보기';
+    tutorialButton.className = 'font-manager-tutorial-button';
+    tutorialButton.onclick = () => {
+        const tutorialContent = docContext.getElementById('fontManagerTutorialContent');
+        if (tutorialContent) {
+            const isHidden = tutorialContent.style.display === 'none';
+            tutorialContent.style.display = isHidden ? 'block' : 'none';
+            tutorialButton.textContent = isHidden ? '튜토리얼 숨기기' : '튜토리얼 보기';
+        }
+    };
+    autoSwitchTitleContainer.appendChild(tutorialButton);
+
+    autoSwitchSection.appendChild(autoSwitchTitleContainer);
+
+    const autoSwitchToggleContainer = docContext.createElement('div');
+    autoSwitchToggleContainer.style.marginBottom = '15px';
+    const autoSwitchCheckbox = docContext.createElement('input');
+    autoSwitchCheckbox.type = 'checkbox';
+    autoSwitchCheckbox.id = 'autoPresetSwitchingEnabledCheckbox';
+    autoSwitchCheckbox.checked = state.autoPresetSwitchingEnabled;
+    autoSwitchCheckbox.addEventListener('change', (e) => {
+        state.autoPresetSwitchingEnabled = e.target.checked;
+        saveAutoPresetSwitchingEnabledToStorage();
+        if (state.autoPresetSwitchingEnabled) {
+            debouncedCheckAndApplyAutoPreset();
+        }
+        showNotification(`자동 프리셋 전환이 ${state.autoPresetSwitchingEnabled ? '활성화' : '비활성화'}되었습니다.`);
+    });
+    const autoSwitchLabel = docContext.createElement('label');
+    autoSwitchLabel.htmlFor = 'autoPresetSwitchingEnabledCheckbox';
+    autoSwitchLabel.textContent = ' 테마 연동 자동 폰트 프리셋 전환 활성화';
+    autoSwitchLabel.style.cursor = 'pointer';
+    autoSwitchToggleContainer.appendChild(autoSwitchCheckbox);
+    autoSwitchToggleContainer.appendChild(autoSwitchLabel);
+    autoSwitchSection.appendChild(autoSwitchToggleContainer);
+
+    const newRuleForm = docContext.createElement('div');
+    newRuleForm.style.border = '1px solid #38383c';
+    newRuleForm.style.padding = '10px';
+    newRuleForm.style.marginBottom = '15px';
+    newRuleForm.style.borderRadius = '4px';
+
+    const newRuleTitle = docContext.createElement('h5');
+    newRuleTitle.textContent = '새 규칙 추가';
+    newRuleTitle.style.marginTop = '0';
+    newRuleTitle.style.marginBottom = '10px';
+    newRuleForm.appendChild(newRuleTitle);
+
+    newRuleForm.appendChild(createFormRow('규칙 설명 (선택 사항):',
+        createInput('text', 'newAutoRuleName', '예: 다크 테마 적응')
+    ));
+
+    const conditionTypeSelect = createSelect('newAutoRuleConditionType', [
+        { value: 'styleContent', text: '테마 CSS 내용 포함' },
+        { value: 'linkHref', text: 'CSS 파일 이름 포함 (link href)' },
+        { value: 'bodyClass', text: 'Body에 클래스명 포함 (body class)' },
+        { value: 'htmlClass', text: 'Html에 클래스명 포함 (html class)' },
+    ]);
+    newRuleForm.appendChild(createFormRow('조건:', conditionTypeSelect));
+
+    newRuleForm.appendChild(createFormRow('조건 값:',
+        createInput('text', 'newAutoRuleConditionValue', '예: dark.css 또는 theme-dark')
+    ));
+
+    const presetForRuleSelect = docContext.createElement('select');
+    presetForRuleSelect.id = 'newAutoRulePresetName';
+    if (state.fontPresets.length === 0) {
+        presetForRuleSelect.appendChild(createOption('사용 가능한 폰트 프리셋이 없습니다', '', true, true));
+    } else {
+        presetForRuleSelect.appendChild(createOption('-- 폰트 프리셋 선택 --', '', true));
+        state.fontPresets.forEach(p => presetForRuleSelect.appendChild(createOption(p.name, p.name)));
+    }
+    newRuleForm.appendChild(createFormRow('적용할 폰트 프리셋:', presetForRuleSelect));
+
+    const addRuleButton = _createButton('규칙 추가', 'confirm', handleAddAutoPresetRule);
+    addRuleButton.style.marginTop = '10px';
+    newRuleForm.appendChild(addRuleButton);
+    autoSwitchSection.appendChild(newRuleForm);
+
+    const rulesListTitle = docContext.createElement('h5');
+    rulesListTitle.textContent = '설정된 규칙 (드래그하여 정렬 가능)';
+    rulesListTitle.style.marginTop = '20px';
+    rulesListTitle.style.marginBottom = '10px';
+    autoSwitchSection.appendChild(rulesListTitle);
+
+    const rulesContainer = docContext.createElement('div');
+    rulesContainer.id = 'autoPresetRulesContainer';
+    rulesContainer.style.maxHeight = '250px';
+    rulesContainer.style.overflowY = 'auto';
+    rulesContainer.style.border = '1px solid #38383c';
+    rulesContainer.style.borderRadius = '4px';
+
+    if (state.autoPresetRules.length === 0) {
+        const noRulesMsg = docContext.createElement('p');
+        noRulesMsg.textContent = '아직 설정된 자동 전환 규칙이 없습니다.';
+        noRulesMsg.style.textAlign = 'center';
+        noRulesMsg.style.padding = '10px';
+        rulesContainer.appendChild(noRulesMsg);
+    } else {
+        state.autoPresetRules.forEach((rule, index) => {
+            rulesContainer.appendChild(createAutoRuleItemElement(rule, index));
+        });
+    }
+    autoSwitchSection.appendChild(rulesContainer);
+
+    const tutorialContent = docContext.createElement('div');
+    tutorialContent.id = 'fontManagerTutorialContent';
+    tutorialContent.className = 'font-manager-tutorial-content';
+    tutorialContent.innerHTML = `
+        <strong>테마 연동 사용법은?</strong>
+        <p>이 기능은 현재 사용 중인 테마를 자동으로 인식하여 해당 테마에 지정한 폰트 조합으로 전환해줍니다. 설정은 매우 간단합니다!</p>
+        <strong>3단계 설정 방법:</strong>
+        <ol>
+        <li>상단의 “폰트 조합 프리셋” 영역에서 원하는 폰트 구성을 설정하고 저장합니다 (예: “화산여몽 폰트”라는 프리셋 생성).</li>
+        <li>하단의 “새 규칙 추가” 양식에서 규칙 이름을 지정합니다 (예: “심플 그레이 테마 연동”).</li>
+        <li>가장 중요한 단계: 테마 CSS 파일에서 “연동 신호”로 사용할 <strong>고유한 주석이나 텍스트</strong>를 찾습니다.</li>
+        </ol>
+        <strong>“연동 신호”를 찾는 방법은?</strong>
+        <p>보통 테마 CSS 파일의 맨 처음에 다음과 같은 주석을 찾을 수 있습니다:</p>
+        <ul>
+        <li><strong>화산여몽(火山旅梦)sp v2.1</strong> 테마의 경우, 특징은 <code>/* =====火山旅梦SP===== */</code> 입니다.</li>
+        <li><strong>심플 그레이(简约灰) v0.3</strong> 테마의 경우, 특징은 <code>/* 欢迎使用简约灰主题... */</code> 입니다.</li>
+        <li><strong>환우독주(寰宇独奏)v1.11</strong> 테마의 경우, 특징은 <code>/* === char界面 === */</code> (또는 더 고유한 폰트 가져오기 URL) 입니다.</li>
+        </ul>
+        <p><strong>작업 가이드:</strong></p>
+        <ul>
+        <li><strong>규칙 유형:</strong> <code>테마 CSS 내용 포함</code>을 선택합니다.</li>
+        <li><strong>조건 값:</strong> 위에서 찾은 고유한 텍스트를 복사하여 붙여넣습니다 (예: 전체 주석 대신 <code>火山旅梦SP</code> 또는 <code>简约灰</code>만 입력해도 됩니다).</li>
+        <li><strong>프리셋 선택:</strong> 첫 번째 단계에서 만든 해당 프리셋을 선택합니다.</li>
+        </ul>
+        <p>규칙을 저장한 후 SillyTavern의 테마를 전환하면 여기의 폰트가 자동으로 따라 변경됩니다!</p>`;
+
+    autoSwitchSection.appendChild(tutorialContent);
+    modalBodyElement.appendChild(autoSwitchSection);
+
+    modalBodyElement.appendChild(renderMultilangSection());
+
+    const importSection = docContext.createElement('div');
+    importSection.style.marginBottom = '20px';
+    const importTitle = docContext.createElement('h4');
+    importTitle.textContent = '폰트 가져오기 (CSS @import)';
+    importTitle.style.marginTop = '0';
+    importTitle.style.marginBottom = '10px';
+    importSection.appendChild(importTitle);
+
+    const cssInput = docContext.createElement('textarea');
+    cssInput.id = CSS_INPUT_ID;
+    cssInput.placeholder = '@import CSS 규칙을 붙여넣으세요. 예:\n@import url("https://fonts.googleapis.com/css2?family=Roboto&display=swap");\nbody { font-family: "Roboto", sans-serif; }';
+    importSection.appendChild(cssInput);
+
+    const fontDiscoveryLink = docContext.createElement('a');
+    fontDiscoveryLink.href = 'https://fonts.zeoseven.com/';
+    fontDiscoveryLink.textContent = '더 많은 무료 상업용 폰트 찾기 (ZeoSeven Fonts)';
+    fontDiscoveryLink.target = '_blank';
+    fontDiscoveryLink.style.display = 'block';
+    fontDiscoveryLink.style.marginTop = '5px';
+    fontDiscoveryLink.style.marginBottom = '10px';
+    fontDiscoveryLink.style.fontSize = '13px';
+    fontDiscoveryLink.style.color = '#76c7b7';
+    importSection.appendChild(fontDiscoveryLink);
+
+    modalBodyElement.appendChild(importSection);
+
+    const processButton = _createButton('처리 및 가져오기', 'confirm', () => {
+        const cssText = cssInput.value.trim();
+        if (cssText) {
+            processAndImportFonts(cssText);
+            cssInput.value = '';
+        }
+    });
+    processButton.style.marginRight = '10px';
+    importSection.appendChild(processButton);
+
+    const localFontImportTitle = docContext.createElement('h5');
+    localFontImportTitle.textContent = '로컬 .ttf 폰트 파일 가져오기';
+    localFontImportTitle.style.marginTop = '15px';
+    localFontImportTitle.style.marginBottom = '5px';
+    importSection.appendChild(localFontImportTitle);
+
+    const localFontDescription = docContext.createElement('p');
+    localFontDescription.style.fontSize = '12px';
+    localFontDescription.style.color = '#aaa';
+    localFontDescription.style.marginBottom = '10px';
+    localFontDescription.innerHTML = '가져온 로컬 폰트는 영구적으로 저장되어 페이지 새로고침 후에도 사용할 수 있습니다.';
+    importSection.appendChild(localFontDescription);
+
+    const localFontFileLabel = docContext.createElement('label');
+    localFontFileLabel.htmlFor = 'fontManagerLocalFontFileInput';
+    localFontFileLabel.textContent = '.ttf 파일 선택:';
+    localFontFileLabel.style.display = 'block';
+    localFontFileLabel.style.marginBottom = '3px';
+    importSection.appendChild(localFontFileLabel);
+
+    const localFontFileInput = createInput('file', 'fontManagerLocalFontFileInput');
+    localFontFileInput.accept = '.ttf,application/font-sfnt,font/ttf';
+    localFontFileInput.style.display = 'block';
+    localFontFileInput.style.marginBottom = '8px';
+    importSection.appendChild(localFontFileInput);
+
+    const localFontNameLabel = docContext.createElement('label');
+    localFontNameLabel.htmlFor = 'fontManagerLocalFontNameInput';
+    localFontNameLabel.textContent = '폰트 이름 지정 (예: 나의 사용자 정의 폰트):';
+    localFontNameLabel.style.display = 'block';
+    localFontNameLabel.style.marginBottom = '3px';
+    importSection.appendChild(localFontNameLabel);
+
+    const localFontNameInput = createInput('text', 'fontManagerLocalFontNameInput', '목록에 표시될 폰트 이름');
+    localFontNameInput.style.display = 'block';
+    localFontNameInput.style.width = 'calc(100% - 12px)';
+    localFontNameInput.style.padding = '5px';
+    localFontNameInput.style.marginBottom = '8px';
+    localFontNameInput.style.boxSizing = 'border-box';
+    localFontNameInput.style.border = '1px solid #555';
+    localFontNameInput.style.borderRadius = '4px';
+    localFontNameInput.style.backgroundColor = '#222';
+    localFontNameInput.style.color = '#ddd';
+    importSection.appendChild(localFontNameInput);
+
+    const importLocalFontButton = _createButton('로컬 폰트 가져오기 확인', '', handleImportLocalFont);
+    importSection.appendChild(importLocalFontButton);
+
+    if (state.localFonts && state.localFonts.length > 0) {
+        const localFontsTitle = docContext.createElement('h5');
+        localFontsTitle.textContent = '가져온 로컬 폰트';
+        localFontsTitle.style.marginTop = '15px';
+        localFontsTitle.style.marginBottom = '5px';
+        importSection.appendChild(localFontsTitle);
+
+        const localFontsContainer = docContext.createElement('div');
+        localFontsContainer.className = 'local-fonts-list';
+        localFontsContainer.style.maxHeight = '150px';
+        localFontsContainer.style.overflowY = 'auto';
+        localFontsContainer.style.border = '1px solid #444';
+        localFontsContainer.style.borderRadius = '4px';
+        localFontsContainer.style.padding = '5px';
+        localFontsContainer.style.marginBottom = '10px';
+        localFontsContainer.style.backgroundColor = '#222';
+
+        state.localFonts.forEach(fontData => {
+            const fontItem = docContext.createElement('div');
+            fontItem.style.display = 'flex';
+            fontItem.style.justifyContent = 'space-between';
+            fontItem.style.alignItems = 'center';
+            fontItem.style.padding = '5px';
+            fontItem.style.borderBottom = '1px solid #333';
+
+            const fontNameSpan = docContext.createElement('span');
+            fontNameSpan.textContent = fontData.fontName;
+            fontNameSpan.style.fontFamily = fontData.fontName;
+            fontNameSpan.style.flexGrow = '1';
+
+            const fontFileNameSpan = docContext.createElement('span');
+            fontFileNameSpan.textContent = fontData.fileName || '알 수 없는 파일';
+            fontFileNameSpan.style.fontSize = '11px';
+            fontFileNameSpan.style.color = '#888';
+            fontFileNameSpan.style.marginLeft = '10px';
+            fontFileNameSpan.style.marginRight = '10px';
+
+            const deleteButton = _createButton('삭제', 'danger', () => {
+                if (confirm(`로컬 폰트 \"${fontData.fontName}\"을(를) 삭제하시겠습니까?`)) {
+                    deleteLocalFontFromIndexedDB(fontData.fontName)
+                        .then(() => {
+                            const index = state.importedFontFamilies.indexOf(fontData.fontName);
+                            if (index !== -1) {
+                                state.importedFontFamilies.splice(index, 1);
+                                saveFontsToStorage();
+                            }
+
+                            if (docContext.body.style.fontFamily === fontData.fontName) {
+                                resetToDefaultFont();
+                            }
+
+                            renderCombinedMainView();
+                            showNotification(`로컬 폰트 \"${fontData.fontName}\"이(가) 삭제되었습니다.`);
+                        })
+                        .catch(error => {
+                            showNotification(`로컬 폰트 삭제 실패: ${error.message || error}`);
+                        });
+                }
+            });
+            deleteButton.style.fontSize = '11px';
+            deleteButton.style.padding = '2px 5px';
+
+            fontItem.appendChild(fontNameSpan);
+            fontItem.appendChild(fontFileNameSpan);
+            fontItem.appendChild(deleteButton);
+
+            localFontsContainer.appendChild(fontItem);
+        });
+
+        importSection.appendChild(localFontsContainer);
+    }
+
+    const listSection = docContext.createElement('div');
+    listSection.style.marginBottom = '20px';
+    const listTitle = docContext.createElement('h4');
+    listTitle.textContent = '가져온 폰트 목록';
+    listTitle.style.marginBottom = '10px';
+    listSection.appendChild(listTitle);
+
+    const currentFontDisplay = docContext.createElement('div');
+    currentFontDisplay.className = 'current-font-display';
+    currentFontDisplay.style.marginBottom = '10px';
+    const activeFontFamily = getCurrentPageFontFamily();
+    const currentUISizeDisplay = state.globalFontSize ? `${state.globalFontSize}px` : initialMainFontSizeFromCSS;
+    currentFontDisplay.innerHTML = `현재 폰트: <span style="font-style: italic; font-family: ${activeFontFamily};">${activeFontFamily || '페이지 기본'}</span> (UI 크기: ${currentUISizeDisplay || '설정 안 됨'})`;
+    listSection.appendChild(currentFontDisplay);
+
+    const fontListContainer = docContext.createElement('div');
+    fontListContainer.className = 'font-list-container';
+    listSection.appendChild(fontListContainer);
+    modalBodyElement.appendChild(listSection);
+
+    if (state.importedFontFamilies.length === 0) {
+        const noFontsMessage = docContext.createElement('p');
+        noFontsMessage.textContent = '아직 가져온 폰트가 없습니다.';
+        noFontsMessage.style.textAlign = 'center';
+        noFontsMessage.style.padding = '20px';
+        fontListContainer.appendChild(noFontsMessage);
+    } else {
+        state.importedFontFamilies.forEach((fontFamily, index) => {
+            const item = docContext.createElement('div');
+            item.className = 'font-manage-item';
+            item.draggable = true;
+            item.addEventListener('dragstart', (e) => handleDragStart(e, index));
+            item.addEventListener('dragover', (e) => handleDragOver(e, index));
+            item.addEventListener('dragleave', handleDragLeave);
+            item.addEventListener('drop', (e) => handleDrop(e, index));
+            item.addEventListener('dragend', handleDragEnd);
+
+            const nameSpan = docContext.createElement('span');
+            nameSpan.className = 'font-name-clickable';
+            nameSpan.textContent = fontFamily;
+            nameSpan.title = `'${fontFamily}' 적용하기`;
+            nameSpan.style.fontFamily = fontFamily;
+            nameSpan.onclick = () => applyFontToBody(fontFamily);
+            item.appendChild(nameSpan);
+
+            const deleteButton = _createButton('삭제', 'danger small-button', (e) => {
+                e.stopPropagation();
+                deleteFont(index);
+            });
+            item.appendChild(deleteButton);
+            fontListContainer.appendChild(item);
+        });
+    }
+
+    const resetDefaultButton = _createButton('페이지 기본 폰트로 복구', '', resetToDefaultFont);
+    listSection.appendChild(resetDefaultButton);
+
+    const fontSizeSection = docContext.createElement('div');
+    fontSizeSection.style.marginBottom = '20px';
+    const fontSizeTitle = docContext.createElement('h4');
+    fontSizeTitle.textContent = '전역 폰트 크기 조정 (UI)';
+    fontSizeTitle.style.marginBottom = '10px';
+    fontSizeSection.appendChild(fontSizeTitle);
+
+    const fontSizeInputContainer = docContext.createElement('div');
+    fontSizeInputContainer.style.display = 'flex';
+    fontSizeInputContainer.style.alignItems = 'center';
+    fontSizeInputContainer.style.gap = '10px';
+
+    const fontSizeInput = createInput('number', 'globalFontSizeInput');
+    fontSizeInput.min = '8';
+    fontSizeInput.max = '40';
+    fontSizeInput.step = '0.5';
+    fontSizeInput.style.width = '80px';
+    fontSizeInput.style.padding = '5px';
+    fontSizeInput.value = state.globalFontSize ? parseFloat(state.globalFontSize) : initialMainFontSizeNumber;
+    fontSizeInput.placeholder = String(initialMainFontSizeNumber);
+
+    const fontSizeUnitLabel = docContext.createElement('span');
+    fontSizeUnitLabel.textContent = 'px';
+
+    const applySizeButton = _createButton('크기 적용', 'confirm', () => applyGlobalFontSize(parseFloat(fontSizeInput.value)));
+    const resetSizeButton = _createButton('크기 초기화', '', () => {
+        applyGlobalFontSize(null);
+        fontSizeInput.value = initialMainFontSizeNumber;
+    });
+
+    fontSizeInputContainer.appendChild(fontSizeInput);
+    fontSizeInputContainer.appendChild(fontSizeUnitLabel);
+    fontSizeInputContainer.appendChild(applySizeButton);
+    fontSizeInputContainer.appendChild(resetSizeButton);
+    fontSizeSection.appendChild(fontSizeInputContainer);
+    modalBodyElement.appendChild(fontSizeSection);
+    
+    const fontWeightSection = docContext.createElement('div');
+    fontWeightSection.style.marginBottom = '20px';
+    const fontWeightTitle = docContext.createElement('h4');
+    fontWeightTitle.textContent = '전역 폰트 굵기 조정 (UI)';
+    fontWeightTitle.style.marginBottom = '10px';
+    fontWeightSection.appendChild(fontWeightTitle);
+    
+    const fontWeightInputContainer = docContext.createElement('div');
+    fontWeightInputContainer.style.display = 'flex';
+    fontWeightInputContainer.style.alignItems = 'center';
+    fontWeightInputContainer.style.gap = '10px';
+    
+    const weightSlider = createInput('range', 'globalFontWeightSlider');
+    weightSlider.min = '100';
+    weightSlider.max = '900';
+    weightSlider.step = '100';
+    weightSlider.style.flexGrow = '1';
+    weightSlider.value = state.globalFontWeight ? parseInt(state.globalFontWeight, 10) : initialMainFontWeightNumber;
+    
+    const weightValueDisplay = docContext.createElement('span');
+    weightValueDisplay.style.minWidth = '40px';
+    weightValueDisplay.style.fontFamily = 'monospace';
+    weightValueDisplay.textContent = weightSlider.value;
+    
+    weightSlider.addEventListener('input', () => {
+        weightValueDisplay.textContent = weightSlider.value;
+    });
+    
+    const applyWeightButton = _createButton('굵기 적용', 'confirm', () => applyGlobalFontWeight(parseInt(weightSlider.value, 10)));
+    const resetWeightButton = _createButton('굵기 초기화', '', () => {
+        applyGlobalFontWeight(null);
+        weightSlider.value = initialMainFontWeightNumber;
+        weightValueDisplay.textContent = initialMainFontWeightNumber;
+    });
+    
+    fontWeightInputContainer.appendChild(weightSlider);
+    fontWeightInputContainer.appendChild(weightValueDisplay);
+    fontWeightInputContainer.appendChild(applyWeightButton);
+    fontWeightInputContainer.appendChild(resetWeightButton);
+    fontWeightSection.appendChild(fontWeightInputContainer);
+    modalBodyElement.appendChild(fontWeightSection);
+
+
+
+
+
+
+    // Section: HLJS Syntax Highlighting Styles
+    const hljsSection = docContext.createElement('div');
+    hljsSection.style.marginBottom = '20px';
+    const hljsTitle = docContext.createElement('h4');
+    hljsTitle.textContent = '코드 하이라이팅 스타일 (HLJS)';
+    hljsTitle.style.marginBottom = '10px';
+    hljsSection.appendChild(hljsTitle);
+    modalBodyElement.appendChild(hljsSection);
+
+    const hljsToggleContainer = docContext.createElement('div');
+    hljsToggleContainer.style.display = 'flex';
+    hljsToggleContainer.style.alignItems = 'center';
+    hljsToggleContainer.style.marginBottom = '15px';
+    const hljsToggleCheckbox = createInput('checkbox', 'hljsCustomizationToggle');
+    hljsToggleCheckbox.checked = state.isHljsCustomizationEnabled;
+    const hljsToggleLabel = docContext.createElement('label');
+    hljsToggleLabel.htmlFor = 'hljsCustomizationToggle';
+    hljsToggleLabel.textContent = ' 사용자 정의 HLJS 스타일 활성화 (비활성화 시 테마 기본 스타일 사용)';
+    hljsToggleLabel.style.cursor = 'pointer';
+    hljsToggleContainer.appendChild(hljsToggleCheckbox);
+    hljsToggleContainer.appendChild(hljsToggleLabel);
+    hljsSection.appendChild(hljsToggleContainer);
+
+    const hljsControlsWrapper = docContext.createElement('div');
+    hljsControlsWrapper.id = 'hljs-controls-wrapper';
+    hljsSection.appendChild(hljsControlsWrapper);
+    
+    if (!state.isHljsCustomizationEnabled) {
+        hljsControlsWrapper.setAttribute('disabled', '');
+    }
+
+    Object.values(hljsScopeSettings).forEach(scope => {
+        const group = docContext.createElement('div');
+        group.style.display = 'flex';
+        group.style.alignItems = 'center';
+        group.style.marginBottom = '8px';
+        group.style.gap = '10px';
+
+        const label = docContext.createElement('label');
+        label.textContent = `${scope.label}:`;
+        label.htmlFor = scope.inputId;
+        label.style.minWidth = '90px';
+
+        const colorInput = createInput('color', scope.inputId);
+        const initialColorString = state[scope.stateKey] || state[scope.initialValueKey];
+        const parsedColor = parseColor(initialColorString, scope.defaultCssValue);
+        const hexColor = `#${parsedColor.r.toString(16).padStart(2, '0')}${parsedColor.g.toString(16).padStart(2, '0')}${parsedColor.b.toString(16).padStart(2, '0')}`;
+        colorInput.value = hexColor;
+
+        const colorValueDisplay = docContext.createElement('span');
+        colorValueDisplay.textContent = colorInput.value;
+        colorValueDisplay.style.fontFamily = 'monospace';
+
+        colorInput.addEventListener('input', () => {
+            colorValueDisplay.textContent = colorInput.value;
+            if (scope.hasOpacitySlider) {
+                updateHljsBackground();
+            }
+        });
+
+        group.appendChild(label);
+        group.appendChild(colorInput);
+        group.appendChild(colorValueDisplay);
+        hljsControlsWrapper.appendChild(group);
+
+        if (scope.hasOpacitySlider) {
+            const opacityContainer = docContext.createElement('div');
+            opacityContainer.className = 'opacity-slider-container';
+
+            const opacityLabel = docContext.createElement('label');
+            opacityLabel.htmlFor = 'hljsBackgroundOpacitySlider';
+            opacityLabel.textContent = '배경 불투명도:';
+
+            const opacitySlider = docContext.createElement('input');
+            opacitySlider.type = 'range';
+            opacitySlider.id = 'hljsBackgroundOpacitySlider';
+            opacitySlider.min = '0';
+            opacitySlider.max = '1';
+            opacitySlider.step = '0.01';
+            opacitySlider.value = parsedColor.a;
+
+            const opacityValueDisplay = docContext.createElement('span');
+            opacityValueDisplay.id = 'hljsBackgroundOpacityValue';
+            opacityValueDisplay.textContent = parsedColor.a.toFixed(2);
+
+            opacitySlider.addEventListener('input', () => {
+                opacityValueDisplay.textContent = parseFloat(opacitySlider.value).toFixed(2);
+                updateHljsBackground();
+            });
+
+            opacityContainer.appendChild(opacityLabel);
+            opacityContainer.appendChild(opacitySlider);
+            opacityContainer.appendChild(opacityValueDisplay);
+            hljsControlsWrapper.appendChild(opacityContainer);
+        }
+    });
+
+    const hljsButtonsGroup = docContext.createElement('div');
+    hljsButtonsGroup.style.marginTop = '10px';
+    hljsButtonsGroup.style.display = 'flex';
+    hljsButtonsGroup.style.gap = '10px';
+
+    const applyHljsButton = _createButton('HLJS 스타일 적용', 'confirm', () => {
+        const newColors = {};
+        Object.values(hljsScopeSettings).forEach(scope => {
+            if (scope.hasOpacitySlider) {
+                newColors[scope.stateKey] = state.hljsBackgroundColor;
+            } else {
+                const inputElement = docContext.getElementById(scope.inputId);
+                if (inputElement) {
+                    newColors[scope.stateKey] = inputElement.value;
+                }
+            }
+        });
+        applyHljsStyling(newColors);
+        applyHljsFontFamily(docContext.getElementById('hljsFontFamilySelector').value);
+        showNotification('사용자 정의 HLJS 스타일이 적용되었습니다!');
+    });
+    hljsButtonsGroup.appendChild(applyHljsButton);
+
+    const resetHljsButton = _createButton('HLJS 스타일 초기화', '', () => resetHljsStyling());
+    hljsButtonsGroup.appendChild(resetHljsButton);
+    hljsControlsWrapper.appendChild(hljsButtonsGroup);
+
+    const hljsFontFamilyGroup = docContext.createElement('div');
+    hljsFontFamilyGroup.style.display = 'flex';
+    hljsFontFamilyGroup.style.alignItems = 'center';
+    hljsFontFamilyGroup.style.marginTop = '10px';
+    hljsFontFamilyGroup.style.gap = '10px';
+
+    const hljsFontLabel = docContext.createElement('label');
+    hljsFontLabel.textContent = '코드 블록 폰트:';
+    hljsFontLabel.htmlFor = 'hljsFontFamilySelector';
+    hljsFontLabel.style.minWidth = '90px';
+
+    const hljsFontSelector = docContext.createElement('select');
+    hljsFontSelector.id = 'hljsFontFamilySelector';
+    hljsFontSelector.style.flexGrow = '1';
+    hljsFontSelector.style.padding = '5px';
+    hljsFontSelector.appendChild(createOption('페이지 기본/상속', '', false, !state.hljsFontFamily));
+    state.importedFontFamilies.forEach(font => {
+        const option = docContext.createElement('option');
+        option.value = font;
+        option.textContent = font;
+        option.style.fontFamily = `'${font}'`;
+        if (state.hljsFontFamily === font) {
+            option.selected = true;
+        }
+        hljsFontSelector.appendChild(option);
+    });
+
+    hljsFontFamilyGroup.appendChild(hljsFontLabel);
+    hljsFontFamilyGroup.appendChild(hljsFontSelector);
+    hljsControlsWrapper.insertBefore(hljsFontFamilyGroup, hljsButtonsGroup);
+    
+    hljsToggleCheckbox.addEventListener('change', (e) => {
+        state.isHljsCustomizationEnabled = e.target.checked;
+        localStorage.setItem(LOCAL_STORAGE_KEY_HLJS_CUSTOMIZATION_ENABLED, state.isHljsCustomizationEnabled);
+        if (state.isHljsCustomizationEnabled) {
+            // 활성화 시, 저장된 설정 적용
+            const currentHljsColors = Object.fromEntries(
+                Object.values(hljsScopeSettings)
+                    .map(scope => [scope.stateKey, localStorage.getItem(scope.lsKey) || state[scope.initialValueKey]])
+            );
+            applyHljsStyling(currentHljsColors);
+            applyHljsFontFamily(localStorage.getItem(LOCAL_STORAGE_KEY_HLJS_FONT_FAMILY));
+        } else {
+            // 비활성화 시, 모든 스타일 초기화 (알림 표시 안 함)
+            resetHljsStyling(false); 
+        }
+        // 컨트롤의 비활성화 상태를 업데이트하기 위해 UI 다시 렌더링
+        renderCombinedMainView();
+    });
+
+    // Section: Message Inline Code Styles (.mes_text code)
+    const mesCodeSection = docContext.createElement('div');
+    mesCodeSection.style.marginBottom = '20px';
+    const mesCodeTitle = docContext.createElement('h4');
+    mesCodeTitle.textContent = '메시지 인라인 코드 스타일 (.mes_text code)';
+    mesCodeTitle.style.marginBottom = '10px';
+    mesCodeSection.appendChild(mesCodeTitle);
+    modalBodyElement.appendChild(mesCodeSection);
+
+    const mesCodeStyleSettings = [
+        { label: '배경색:', inputId: 'mesCodeBgColorInput', stateKey: 'mesCodeBgColor', initialValueKey: 'initialMesCodeBgColor', lsKey: LOCAL_STORAGE_KEY_MES_CODE_BG_COLOR, defaultCssValue: 'rgba(255, 255, 255, 0.05)', hasOpacitySlider: true },
+        { label: '텍스트 색상:', inputId: 'mesCodeTextColorInput', stateKey: 'mesCodeTextColor', initialValueKey: 'initialMesCodeTextColor', lsKey: LOCAL_STORAGE_KEY_MES_CODE_TEXT_COLOR, defaultCssValue: 'rgb(81, 160, 222)' },
+        { label: '테두리 색상:', inputId: 'mesCodeBorderColorInput', stateKey: 'mesCodeBorderColor', initialValueKey: 'initialMesCodeBorderColor', lsKey: LOCAL_STORAGE_KEY_MES_CODE_BORDER_COLOR, defaultCssValue: 'rgba(0, 0, 0, 0)' }
+    ];
+
+    mesCodeStyleSettings.forEach(setting => {
+        const group = docContext.createElement('div');
+        group.style.display = 'flex';
+        group.style.alignItems = 'center';
+        group.style.marginBottom = '8px';
+        group.style.gap = '10px';
+
+        const label = docContext.createElement('label');
+        label.textContent = setting.label;
+        label.htmlFor = setting.inputId;
+        label.style.minWidth = '90px';
+
+        const colorInput = createInput('color', setting.inputId);
+        const initialColorString = state[setting.stateKey] || state[setting.initialValueKey];
+        const parsedColor = parseColor(initialColorString, setting.defaultCssValue);
+        const hexColor = `#${parsedColor.r.toString(16).padStart(2, '0')}${parsedColor.g.toString(16).padStart(2, '0')}${parsedColor.b.toString(16).padStart(2, '0')}`;
+        colorInput.value = hexColor;
+
+        const colorValueDisplay = docContext.createElement('span');
+        colorValueDisplay.textContent = colorInput.value;
+        colorValueDisplay.style.fontFamily = 'monospace';
+
+        colorInput.addEventListener('input', () => {
+            colorValueDisplay.textContent = colorInput.value;
+            if (setting.hasOpacitySlider) {
+                updateMesCodeBackground();
+            }
+        });
+
+        group.appendChild(label);
+        group.appendChild(colorInput);
+        group.appendChild(colorValueDisplay);
+        mesCodeSection.appendChild(group);
+
+        if (setting.hasOpacitySlider) {
+            const opacityContainer = docContext.createElement('div');
+            opacityContainer.className = 'opacity-slider-container';
+
+            const opacityLabel = docContext.createElement('label');
+            opacityLabel.htmlFor = 'mesCodeBackgroundOpacitySlider';
+            opacityLabel.textContent = '배경 불투명도:';
+
+            const opacitySlider = docContext.createElement('input');
+            opacitySlider.type = 'range';
+            opacitySlider.id = 'mesCodeBackgroundOpacitySlider';
+            opacitySlider.min = '0';
+            opacitySlider.max = '1';
+            opacitySlider.step = '0.01';
+            opacitySlider.value = parsedColor.a;
+
+            const opacityValueDisplay = docContext.createElement('span');
+            opacityValueDisplay.id = 'mesCodeBackgroundOpacityValue';
+            opacityValueDisplay.textContent = parsedColor.a.toFixed(2);
+
+            opacitySlider.addEventListener('input', () => {
+                opacityValueDisplay.textContent = parseFloat(opacitySlider.value).toFixed(2);
+                updateMesCodeBackground();
+            });
+
+            opacityContainer.appendChild(opacityLabel);
+            opacityContainer.appendChild(opacitySlider);
+            opacityContainer.appendChild(opacityValueDisplay);
+            mesCodeSection.appendChild(opacityContainer);
+        }
+    });
+
+    const mesCodeButtonsGroup = docContext.createElement('div');
+    mesCodeButtonsGroup.style.marginTop = '10px';
+    mesCodeButtonsGroup.style.display = 'flex';
+    mesCodeButtonsGroup.style.gap = '10px';
+
+    const applyMesCodeButton = _createButton('인라인 코드 스타일 적용', 'confirm', () => {
+        const stylesToApply = {};
+        mesCodeStyleSettings.forEach(setting => {
+            let styleKey = setting.stateKey.replace('mesCode', '');
+            styleKey = styleKey.charAt(0).toLowerCase() + styleKey.slice(1);
+            if (setting.hasOpacitySlider) {
+                stylesToApply[styleKey] = state.mesCodeBgColor;
+            } else {
+                const inputElement = docContext.getElementById(setting.inputId);
+                if (inputElement) {
+                    stylesToApply[styleKey] = inputElement.value;
+                }
+            }
+        });
+        applyMessageInlineCodeStyles(stylesToApply);
+        applyMesCodeFontFamily(docContext.getElementById('mesCodeFontFamilySelector').value);
+    });
+    mesCodeButtonsGroup.appendChild(applyMesCodeButton);
+
+    const resetMesCodeButton = _createButton('인라인 코드 스타일 초기화', '', () => resetMessageInlineCodeStyles());
+    mesCodeButtonsGroup.appendChild(resetMesCodeButton);
+    mesCodeSection.appendChild(mesCodeButtonsGroup);
+
+    const mesCodeFontFamilyGroup = docContext.createElement('div');
+    mesCodeFontFamilyGroup.style.display = 'flex';
+    mesCodeFontFamilyGroup.style.alignItems = 'center';
+    mesCodeFontFamilyGroup.style.marginTop = '10px';
+    mesCodeFontFamilyGroup.style.gap = '10px';
+
+    const mesCodeFontLabel = docContext.createElement('label');
+    mesCodeFontLabel.textContent = '인라인 코드 폰트:';
+    mesCodeFontLabel.htmlFor = 'mesCodeFontFamilySelector';
+    mesCodeFontLabel.style.minWidth = '90px';
+
+    const mesCodeFontSelector = docContext.createElement('select');
+    mesCodeFontSelector.id = 'mesCodeFontFamilySelector';
+    mesCodeFontSelector.style.flexGrow = '1';
+    mesCodeFontSelector.style.padding = '5px';
+    mesCodeFontSelector.appendChild(createOption('페이지 기본/상속', '', false, !state.mesCodeFontFamily));
+    state.importedFontFamilies.forEach(font => {
+        const option = docContext.createElement('option');
+        option.value = font;
+        option.textContent = font;
+        option.style.fontFamily = `'${font}'`;
+        if (state.mesCodeFontFamily === font) {
+            option.selected = true;
+        }
+        mesCodeFontSelector.appendChild(option);
+    });
+
+    mesCodeFontFamilyGroup.appendChild(mesCodeFontLabel);
+    mesCodeFontFamilyGroup.appendChild(mesCodeFontSelector);
+    mesCodeSection.insertBefore(mesCodeFontFamilyGroup, mesCodeButtonsGroup);
+
+    // Section: Quote Block Styles (blockquote)
+    const quoteSection = docContext.createElement('div');
+    quoteSection.style.marginBottom = '20px';
+    const quoteTitle = docContext.createElement('h4');
+    quoteTitle.textContent = '인용문 블록 스타일 (blockquote)';
+    quoteTitle.style.marginBottom = '10px';
+    quoteSection.appendChild(quoteTitle);
+    modalBodyElement.appendChild(quoteSection);
+
+    const quoteStyleSettings = [
+        { label: '텍스트 색상:', inputId: 'quoteTextColorInput', stateKey: 'quoteTextColor', initialValueKey: 'initialQuoteTextColor', lsKey: LOCAL_STORAGE_KEY_QUOTE_TEXT_COLOR, defaultCssValue: 'rgb(81, 160, 222)' },
+        { label: '배경색:', inputId: 'quoteBgColorInput', stateKey: 'quoteBgColor', initialValueKey: 'initialQuoteBgColor', lsKey: LOCAL_STORAGE_KEY_QUOTE_BG_COLOR, defaultCssValue: 'rgba(0, 0, 0, 0)' },
+        { label: '왼쪽 테두리 색상:', inputId: 'quoteBorderColorInput', stateKey: 'quoteBorderColor', initialValueKey: 'initialQuoteBorderColor', lsKey: LOCAL_STORAGE_KEY_QUOTE_BORDER_COLOR, defaultCssValue: 'rgb(81, 160, 222)' }
+    ];
+
+    quoteStyleSettings.forEach(setting => {
+        const group = docContext.createElement('div');
+        group.style.display = 'flex';
+        group.style.alignItems = 'center';
+        group.style.marginBottom = '8px';
+        group.style.gap = '10px';
+
+        const label = docContext.createElement('label');
+        label.textContent = setting.label;
+        label.htmlFor = setting.inputId;
+        label.style.minWidth = '90px';
+
+        const colorInput = createInput('color', setting.inputId);
+        const initialColorString = state[setting.stateKey] || state[setting.initialValueKey] || setting.defaultCssValue;
+        const parsedColor = parseColor(initialColorString, setting.defaultCssValue);
+        const hexColor = `#${parsedColor.r.toString(16).padStart(2, '0')}${parsedColor.g.toString(16).padStart(2, '0')}${parsedColor.b.toString(16).padStart(2, '0')}`;
+        colorInput.value = hexColor;
+
+        const colorValueDisplay = docContext.createElement('span');
+        colorValueDisplay.textContent = colorInput.value;
+        colorValueDisplay.style.fontFamily = 'monospace';
+
+        colorInput.addEventListener('input', () => {
+            colorValueDisplay.textContent = colorInput.value;
+        });
+
+        group.appendChild(label);
+        group.appendChild(colorInput);
+        group.appendChild(colorValueDisplay);
+        quoteSection.appendChild(group);
+    });
+
+    const quoteButtonsGroup = docContext.createElement('div');
+    quoteButtonsGroup.style.marginTop = '10px';
+    quoteButtonsGroup.style.display = 'flex';
+    quoteButtonsGroup.style.gap = '10px';
+
+    const applyQuoteButton = _createButton('인용문 블록 스타일 적용', 'confirm', () => {
+        const stylesToApply = {
+            textColor: docContext.getElementById('quoteTextColorInput').value,
+            bgColor: docContext.getElementById('quoteBgColorInput').value,
+            borderColor: docContext.getElementById('quoteBorderColorInput').value,
+        };
+        applyQuoteStyles(stylesToApply);
+        showNotification('인용문 블록 스타일이 적용되었습니다!', 'success');
+    });
+    quoteButtonsGroup.appendChild(applyQuoteButton);
+
+    const resetQuoteButton = _createButton('인용문 블록 스타일 초기화', '', () => {
+        resetQuoteStyles();
+    });
+    quoteButtonsGroup.appendChild(resetQuoteButton);
+    quoteSection.appendChild(quoteButtonsGroup);
+
+
+    _renderFooterButtons([
+        { text: '폰트 팩 내보내기', className: '', onClick: handleExportFontPack },
+        { text: '폰트 팩 가져오기', className: '', onClick: () => docContext.getElementById('fontPackFileInput').click() },
+        { text: '닫기', className: 'close', onClick: closeModal }
+    ]);
+
+    let fileInput = docContext.getElementById('fontPackFileInput');
+    if (!fileInput) {
+        fileInput = createInput('file', 'fontPackFileInput');
+        fileInput.accept = '.json';
+        fileInput.style.display = 'none';
+        fileInput.addEventListener('change', handleFontPackFileSelected);
+        modalBodyElement.appendChild(fileInput);
+    }
+}
+
+function createExtensionMenuButton(retryCount = 0) {
+    const MAX_RETRIES = 5;
+    const RETRY_DELAY = 500;
+
+    if (docContext.getElementById(MENU_BUTTON_ID)) {
+        return;
+    }
+
+    const extensionsMenu = docContext.getElementById('extensions_menu') || docContext.getElementById('extensionsMenu');
+
+    if (extensionsMenu) {
+        const menuButton = docContext.createElement('div');
+        menuButton.id = MENU_BUTTON_ID;
+        menuButton.className = 'list-group-item flex-container flexGap5 interactable';
+        menuButton.setAttribute('tabindex', '0');
+        menuButton.title = '폰트 관리';
+
+        const iconSpan = docContext.createElement('span');
+        iconSpan.textContent = '✒';
+        menuButton.appendChild(iconSpan);
+
+        const textSpan = docContext.createElement('span');
+        textSpan.textContent = '폰트 관리';
+        menuButton.appendChild(textSpan);
+
+        menuButton.onclick = openFontManagerModal;
+        extensionsMenu.prepend(menuButton);
+        console.log('Font Manager: Button added to extensions menu.');
+    } else {
+        if (retryCount < MAX_RETRIES) {
+            setTimeout(() => createExtensionMenuButton(retryCount + 1), RETRY_DELAY);
+        } else {
+            console.error('Font Manager: Extensions menu not found after multiple retries. Button not added.');
+        }
+    }
+}
+
+// ========= Event Handlers & Logic =========
+function processAndImportFonts(cssText) {
+    const importRegex = /@import\s+url\((['"])(.*?)\1\);/gi;
+    const fontFamilyRegex = /font-family\s*:\s*(['"]?)([^;,'"]+)\1/gi;
+    let match;
+    let importsAttempted = 0;
+    let importsSucceeded = 0;
+    let familiesFound = [];
+
+    let importMatch;
+    while ((importMatch = importRegex.exec(cssText)) !== null) {
+        const importUrl = importMatch[2];
+        importsAttempted++;
+        try {
+            const styleElement = docContext.createElement('style');
+            styleElement.textContent = `@import url('${importUrl}');`;
+            docContext.head.appendChild(styleElement);
+            importsSucceeded++;
+            if (!state.fontImportUrls.includes(importUrl)) {
+                state.fontImportUrls.push(importUrl);
+            }
+        } catch (e) {
+            console.error('Font Manager: Error creating style tag for import ' + importUrl + ':', e);
+        }
+    }
+
+    let newFamiliesAdded = false;
+    while ((match = fontFamilyRegex.exec(cssText)) !== null) {
+        const fontFamilyGroup = match[2].trim();
+        fontFamilyGroup.split(',').forEach(name => {
+            const cleanedName = name.trim().replace(/^['"]|['"]$/g, '');
+            if (cleanedName && !state.importedFontFamilies.includes(cleanedName)) {
+                state.importedFontFamilies.push(cleanedName);
+                familiesFound.push(cleanedName);
+                newFamiliesAdded = true;
+            }
+        });
+    }
+
+    let message = "폰트 가져오기 처리가 완료되었습니다.\n";
+    if (importsAttempted > 0) {
+        message += `${importsAttempted}개의 @import 규칙을 시도하여 ${importsSucceeded}개 성공했습니다.\n`;
+    }
+    if (familiesFound.length > 0) {
+        message += "인식 및 기록된 폰트 이름: " + familiesFound.join(', ') + "\n이 폰트들은 나중에\"폰트 관리\"에서 선택하여 적용할 수 있습니다.";
+    } else if (importsAttempted === 0 && familiesFound.length === 0) {
+        message = '유효한 @import 규칙 또는 font-family 정의를 찾을 수 없습니다.';
+    }
+    showNotification(message);
+
+    if (newFamiliesAdded || (importsSucceeded > 0)) {
+        saveFontsToStorage();
+        saveFontImportUrlsToStorage();
+    }
+    renderCombinedMainView();
+}
+
+function applyGlobalFontToAllElements(fontFamily) {
+    const htmlElement = docContext.documentElement;
+    
+    // 폰트 굵기를 우선 처리하여 CSS 변수가 항상 최신이 되도록 함
+    if (state.globalFontWeight) {
+        htmlElement.style.setProperty('--mainFontWeight', state.globalFontWeight.toString());
+    } else {
+        htmlElement.style.removeProperty('--mainFontWeight');
+    }
+
+    // 폰트 크기를 다음으로 처리
+    if (state.globalFontSize) {
+        htmlElement.style.setProperty('--mainFontSize', `${state.globalFontSize}px`);
+    } else {
+        htmlElement.style.removeProperty('--mainFontSize');
+    }
+
+    // 폰트를 적용하는 style 태그 업데이트
+    let globalStyleElement = docContext.getElementById('font-manager-global-font');
+    if (!globalStyleElement) {
+        globalStyleElement = docContext.createElement('style');
+        globalStyleElement.id = 'font-manager-global-font';
+        docContext.head.appendChild(globalStyleElement);
+    }
+
+    const familyVar = fontFamily ? `font-family: "${fontFamily}", sans-serif !important;` : '';
+    const weightVar = state.globalFontWeight ? `font-weight: var(--mainFontWeight) !important;` : 'font-weight: initial;';
+
+    // 규칙 조합, 사용자 정의 폰트가 없어도 굵기는 독립적으로 적용되어야 함
+    globalStyleElement.textContent = `
+        body, .mes_text, #chat, .message,
+        *:not([class*="fa-"]):not([class*="icon"]):not([class*="material"]):not([class*="hljs"]) {
+            ${familyVar}
+            ${weightVar}
+        }
+        
+        code, pre, .hljs, 
+        input, textarea {
+            ${familyVar}
+            ${weightVar}
+        }
+    `;
+}
+
+function applyFontToBody(fontFamily) {
+    if (!fontFamily) {
+        console.warn('Font Manager: No font family provided to applyFontToBody');
+        return;
+    }
+
+    try {
+        if (state.multilangEnabled) {
+            showNotification('현재 다국어 폰트 모드입니다. 다국어 설정에서 폰트를 구성하거나, 먼저 다국어 모드를 비활성화해주세요.');
+            return;
+        }
+
+        applyGlobalFontToAllElements(fontFamily);
+        localStorage.setItem(LOCAL_STORAGE_KEY_ACTIVE_FONT, fontFamily);
+        state.activeFont = fontFamily;
+
+        if (modalBodyElement) {
+            const currentFontDisplay = modalBodyElement.querySelector('.current-font-display');
+            if (currentFontDisplay) {
+                const currentUISizeDisplay = state.globalFontSize ? `${state.globalFontSize}px` : initialMainFontSizeFromCSS;
+                currentFontDisplay.innerHTML = `현재 폰트: <span style="font-style: italic; font-family: ${fontFamily};">${fontFamily}</span> (UI 크기: ${currentUISizeDisplay || '설정 안 됨'})`;
+            }
+        }
+
+    } catch (error) {
+        console.error('Font Manager: Error applying font to body:', error);
+        showNotification(`폰트 적용 중 오류 발생: ${error.message}`);
+    }
+}
+
+function openFontManagerModal() {
+    ensureModalStructure();
+    if (!modalElement || !modalDialogElement) {
+        console.error('Font Manager: Modal elements not available!');
+        return;
+    }
+    renderCombinedMainView();
+    modalElement.style.display = 'flex';
+}
+
+function closeModal() {
+    if (modalElement) {
+        modalElement.style.display = 'none';
+    }
+}
+
+function handleSaveNewPreset() {
+    const nameInput = docContext.getElementById('fontManagerNewPresetName');
+    if (!nameInput) return;
+    const presetName = nameInput.value.trim();
+
+    if (!presetName) {
+        showNotification('프리셋 이름을 입력해주세요!', 'warning');
+        return;
+    }
+
+    if (state.fontPresets.some(p => p.name === presetName)) {
+        showNotification(`이름이 \"${presetName}\"인 프리셋이 이미 존재합니다! 다른 이름을 사용하거나 기존 프리셋을 업데이트해주세요.`, 'warning');
+        return;
+    }
+
+    const currentSettings = getCurrentFontSettingsAsPresetData();
+    state.fontPresets.push({ name: presetName, settings: currentSettings });
+    saveFontPresetsToStorage();
+    nameInput.value = '';
+    renderCombinedMainView();
+    showNotification(`폰트 프리셋 \"${presetName}\"이(가) 저장되었습니다!`, 'success');
+}
+
+function handleApplySelectedPreset() {
+    const selectElement = docContext.getElementById('fontManagerPresetSelect');
+    if (!selectElement || selectElement.selectedOptions.length === 0) {
+        showNotification('선택된 프리셋이 없습니다.', 'info');
+        return;
+    }
+    const selectedPresetName = selectElement.value;
+    const presetToApply = state.fontPresets.find(p => p.name === selectedPresetName);
+
+    if (presetToApply && presetToApply.settings) {
+        applyPresetSettings(presetToApply.settings);
+    } else {
+        showNotification(`프리셋 \"${selectedPresetName}\"을(를) 찾을 수 없거나 설정이 유효하지 않습니다.`, 'error');
+    }
+}
+
+function handleUpdateSelectedPreset() {
+    const selectElement = docContext.getElementById('fontManagerPresetSelect');
+    if (!selectElement || selectElement.selectedOptions.length === 0) {
+        showNotification('먼저 업데이트할 프리셋을 선택해주세요.', 'info');
+        return;
+    }
+    const selectedPresetName = selectElement.value;
+    const presetIndex = state.fontPresets.findIndex(p => p.name === selectedPresetName);
+
+    if (presetIndex === -1) {
+        showNotification(`프리셋 \"${selectedPresetName}\"을(를) 찾을 수 없어 업데이트할 수 없습니다.`, 'error');
+        return;
+    }
+
+    if (!confirm(`현재 폰트 설정으로 프리셋 \"${selectedPresetName}\"을(를) 덮어쓰시겠습니까?`)) {
+        return;
+    }
+
+    const currentSettings = getCurrentFontSettingsAsPresetData();
+    state.fontPresets[presetIndex].settings = currentSettings;
+    saveFontPresetsToStorage();
+    renderCombinedMainView();
+    showNotification(`폰트 프리셋 \"${selectedPresetName}\"이(가) 업데이트되었습니다!`, 'success');
+}
+
+function handleDeleteSelectedPreset() {
+    const selectElement = docContext.getElementById('fontManagerPresetSelect');
+    if (!selectElement || selectElement.selectedOptions.length === 0) {
+        showNotification('먼저 삭제할 프리셋을 선택해주세요.', 'info');
+        return;
+    }
+    const selectedPresetName = selectElement.value;
+
+    if (!confirm(`폰트 프리셋 \"${selectedPresetName}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+        return;
+    }
+
+    state.fontPresets = state.fontPresets.filter(p => p.name !== selectedPresetName);
+    saveFontPresetsToStorage();
+    renderCombinedMainView();
+    showNotification(`폰트 프리셋 \"${selectedPresetName}\"이(가) 삭제되었습니다!`, 'success');
+}
+
+let draggedRuleIndex = null;
+
+function createAutoRuleItemElement(rule, index) {
+    const item = docContext.createElement('div');
+    item.className = 'auto-rule-item';
+    item.dataset.ruleId = rule.id || `rule-${index}`;
+    item.style.padding = '8px 10px';
+    item.style.borderBottom = '1px solid #303032';
+    item.style.display = 'flex';
+    item.style.justifyContent = 'space-between';
+    item.style.alignItems = 'center';
+    item.style.backgroundColor = '#2a2a2c';
+    item.draggable = true;
+
+    item.addEventListener('dragstart', (e) => {
+        draggedRuleIndex = state.autoPresetRules.findIndex(r => (r.id || `rule-${state.autoPresetRules.indexOf(r)}`) === item.dataset.ruleId);
+        e.dataTransfer.effectAllowed = 'move';
+        item.style.opacity = '0.5';
+    });
+    item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const targetIndex = state.autoPresetRules.findIndex(r => (r.id || `rule-${state.autoPresetRules.indexOf(r)}`) === item.dataset.ruleId);
+        if (targetIndex !== draggedRuleIndex) {
+            item.style.borderTop = '2px dashed #00aaff';
+        }
+    });
+    item.addEventListener('dragleave', () => {
+        item.style.borderTop = '';
+    });
+    item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        item.style.borderTop = '';
+        item.style.opacity = '1';
+        const targetIndex = state.autoPresetRules.findIndex(r => (r.id || `rule-${state.autoPresetRules.indexOf(r)}`) === item.dataset.ruleId);
+        if (draggedRuleIndex !== null && draggedRuleIndex !== targetIndex) {
+            const ruleToMove = state.autoPresetRules.splice(draggedRuleIndex, 1)[0];
+            state.autoPresetRules.splice(targetIndex, 0, ruleToMove);
+            saveAutoPresetRulesToStorage();
+            renderCombinedMainView();
+        }
+        draggedRuleIndex = null;
+    });
+    item.addEventListener('dragend', () => {
+        item.style.opacity = '1';
+        draggedRuleIndex = null;
+        docContext.querySelectorAll('.auto-rule-item').forEach(el => el.style.borderTop = '');
+    });
+
+
+    const ruleInfo = docContext.createElement('div');
+    ruleInfo.style.flexGrow = '1';
+
+    const ruleNameDisplay = docContext.createElement('strong');
+    ruleNameDisplay.textContent = rule.name || `규칙 #${index + 1}`;
+    ruleNameDisplay.style.display = 'block';
+    ruleNameDisplay.style.color = rule.enabled === false ? '#777' : '#e0e0e0';
+    ruleInfo.appendChild(ruleNameDisplay);
+
+    const ruleDetail = docContext.createElement('small');
+    const conditionMap = {
+        styleContent: '테마 CSS 내용 포함',
+        linkHref: 'CSS 파일 이름 포함',
+        bodyClass: 'Body 클래스명 포함',
+        htmlClass: 'Html 클래스명 포함'
+    };
+    ruleDetail.textContent = `조건: ${conditionMap[rule.conditionType] || rule.conditionType} "${rule.conditionValue}" 일 때, 프리셋 "${rule.presetName}" 적용`;
+    ruleDetail.style.color = '#aaa';
+    ruleDetail.style.fontSize = '11px';
+    ruleInfo.appendChild(ruleDetail);
+    item.appendChild(ruleInfo);
+
+    const actions = docContext.createElement('div');
+    actions.style.display = 'flex';
+    actions.style.alignItems = 'center';
+
+    const enableRuleCheckbox = docContext.createElement('input');
+    enableRuleCheckbox.type = 'checkbox';
+    enableRuleCheckbox.checked = rule.enabled !== false;
+    enableRuleCheckbox.title = rule.enabled !== false ? "이 규칙 비활성화" : "이 규칙 활성화";
+    enableRuleCheckbox.style.marginRight = '10px';
+    enableRuleCheckbox.addEventListener('change', (e) => {
+        rule.enabled = e.target.checked;
+        saveAutoPresetRulesToStorage();
+        ruleNameDisplay.style.color = rule.enabled === false ? '#777' : '#e0e0e0';
+        if (rule.enabled) debouncedCheckAndApplyAutoPreset();
+    });
+    actions.appendChild(enableRuleCheckbox);
+
+    const editButton = _createButton('편집', '', () => handleEditAutoPresetRule(rule));
+    editButton.style.fontSize = '11px';
+    editButton.style.padding = '3px 6px';
+    editButton.style.marginRight = '5px';
+    actions.appendChild(editButton);
+
+    const deleteButton = _createButton('삭제', 'danger', () => handleDeleteAutoPresetRule(rule));
+    deleteButton.style.fontSize = '11px';
+    deleteButton.style.padding = '3px 6px';
+    actions.appendChild(deleteButton);
+    item.appendChild(actions);
+
+    if (!item.nextSibling) {
+        item.style.borderBottom = 'none';
+    }
+
+    return item;
+}
+
+function handleAddAutoPresetRule() {
+    const name = docContext.getElementById('newAutoRuleName').value.trim();
+    const conditionType = docContext.getElementById('newAutoRuleConditionType').value;
+    const conditionValue = docContext.getElementById('newAutoRuleConditionValue').value.trim();
+    const presetName = docContext.getElementById('newAutoRulePresetName').value;
+
+    if (!conditionValue || !presetName) {
+        showNotification('조건 값과 폰트 프리셋은 비워둘 수 없습니다!', 'warning');
+        return;
+    }
+
+    const newRule = {
+        id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name: name,
+        conditionType: conditionType,
+        conditionValue: conditionValue,
+        presetName: presetName,
+        enabled: true
+    };
+
+    state.autoPresetRules.push(newRule);
+    saveAutoPresetRulesToStorage();
+    renderCombinedMainView();
+    showNotification('자동 전환 규칙이 추가되었습니다.', 'success');
+    debouncedCheckAndApplyAutoPreset();
+}
+
+let editingRuleId = null;
+
+function handleEditAutoPresetRule(ruleToEdit) {
+    editingRuleId = ruleToEdit.id;
+
+    docContext.getElementById('newAutoRuleName').value = ruleToEdit.name || '';
+    docContext.getElementById('newAutoRuleConditionType').value = ruleToEdit.conditionType;
+    docContext.getElementById('newAutoRuleConditionValue').value = ruleToEdit.conditionValue;
+    docContext.getElementById('newAutoRulePresetName').value = ruleToEdit.presetName;
+
+    const actionButton = Array.from(docContext.querySelectorAll('.auto-preset-switch-section .font-manager-modal-button'))
+        .find(btn => btn.textContent === '규칙 추가' || btn.textContent === '규칙 업데이트');
+    if (actionButton) {
+        actionButton.textContent = '규칙 업데이트';
+        actionButton.onclick = handleUpdateAutoPresetRule;
+    }
+
+    const newRuleFormElement = docContext.querySelector('.auto-preset-switch-section div[style*="border: 1px solid #38383c;"]');
+    if (newRuleFormElement) newRuleFormElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    showNotification('규칙이 양식에 로드되었습니다. 수정 후 “규칙 업데이트”를 클릭하세요.', 'info');
+}
+
+function handleUpdateAutoPresetRule() {
+    if (!editingRuleId) {
+        showNotification('편집 중인 규칙이 없습니다.', 'error');
+        return;
+    }
+
+    const ruleIndex = state.autoPresetRules.findIndex(r => r.id === editingRuleId);
+    if (ruleIndex === -1) {
+        showNotification('업데이트할 규칙을 찾을 수 없습니다.', 'error');
+        editingRuleId = null;
+        renderCombinedMainView();
+        return;
+    }
+
+    const name = docContext.getElementById('newAutoRuleName').value.trim();
+    const conditionType = docContext.getElementById('newAutoRuleConditionType').value;
+    const conditionValue = docContext.getElementById('newAutoRuleConditionValue').value.trim();
+    const presetName = docContext.getElementById('newAutoRulePresetName').value;
+
+    if (!conditionValue || !presetName) {
+        showNotification('조건 값과 폰트 프리셋은 비워둘 수 없습니다!', 'warning');
+        return;
+    }
+
+    state.autoPresetRules[ruleIndex] = { ...state.autoPresetRules[ruleIndex], name, conditionType, conditionValue, presetName };
+
+    saveAutoPresetRulesToStorage();
+    renderCombinedMainView();
+    showNotification('자동 전환 규칙이 업데이트되었습니다.', 'success');
+    debouncedCheckAndApplyAutoPreset();
+    editingRuleId = null;
+}
+
+
+function handleDeleteAutoPresetRule(ruleToDelete) {
+    const ruleIdToDelete = ruleToDelete.id;
+    if (!confirm(`규칙 \"${ruleToDelete.name || ruleIdToDelete}\"을(를) 삭제하시겠습니까?`)) {
+        return;
+    }
+
+    state.autoPresetRules = state.autoPresetRules.filter(r => r.id !== ruleIdToDelete);
+    saveAutoPresetRulesToStorage();
+    renderCombinedMainView();
+    showNotification('자동 전환 규칙이 삭제되었습니다.', 'success');
+    debouncedCheckAndApplyAutoPreset();
+}
+function getCurrentPageFontFamily() {
+    try {
+        if (docContext && docContext.body && docContext.defaultView) {
+            return docContext.defaultView.getComputedStyle(docContext.body).fontFamily;
+        }
+        return '감지할 수 없음';
+    } catch (e) {
+        console.error('Font Manager: Error detecting current font family:', e);
+        return '감지 오류';
+    }
+}
+
+// ========= Drag and Drop Handlers =========
+function handleDragStart(event, index) {
+    draggedItemIndex = index;
+    event.dataTransfer.effectAllowed = 'move';
+    event.target.classList.add('dragging-font-item');
+}
+
+function handleDragOver(event, targetIndex) {
+    event.preventDefault();
+    if (targetIndex !== draggedItemIndex) {
+        const targetElement = event.target.closest('.font-manage-item');
+        if (targetElement) {
+            targetElement.classList.add('drag-over-font-item');
+        }
+    }
+}
+
+function handleDragLeave(event) {
+    const targetElement = event.target.closest('.font-manage-item');
+    if (targetElement) {
+        targetElement.classList.remove('drag-over-font-item');
+    }
+}
+
+function handleDrop(event, targetIndex) {
+    event.preventDefault();
+    const targetElement = event.target.closest('.font-manage-item');
+    if (targetElement) {
+        targetElement.classList.remove('drag-over-font-item');
+    }
+
+    if (draggedItemIndex !== null && draggedItemIndex !== targetIndex) {
+        const itemToMove = state.importedFontFamilies.splice(draggedItemIndex, 1)[0];
+        state.importedFontFamilies.splice(targetIndex, 0, itemToMove);
+        saveFontsToStorage();
+        renderCombinedMainView();
+    }
+    draggedItemIndex = null;
+}
+
+function handleDragEnd(event) {
+    event.target.classList.remove('dragging-font-item');
+    const allItems = modalBodyElement.querySelectorAll('.font-manage-item.drag-over-font-item');
+    allItems.forEach(item => item.classList.remove('drag-over-font-item'));
+    draggedItemIndex = null;
+}
+
+function deleteFont(index) {
+    const deletedFont = state.importedFontFamilies.splice(index, 1)[0];
+    let message = `폰트 \"${deletedFont}\"이(가) 삭제되었습니다.`;
+    if (docContext.body.style.fontFamily === deletedFont) {
+        resetToDefaultFont();
+        message = `폰트 \"${deletedFont}\"이(가) 삭제되었고, 페이지 폰트가 기본값으로 재설정되었습니다.`;
+    }
+    showNotification(message);
+    saveFontsToStorage();
+    renderCombinedMainView();
+}
+
+function handleExportFontPack() {
+    const packData = {
+        version: FONT_PACK_VERSION,
+        timestamp: new Date().toISOString(),
+        settings: {
+            importedFontFamilies: state.importedFontFamilies,
+            fontImportUrls: state.fontImportUrls,
+            activeFont: localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVE_FONT),
+            globalFontSize: localStorage.getItem(LOCAL_STORAGE_KEY_GLOBAL_FONT_SIZE),
+            globalFontWeight: localStorage.getItem(LOCAL_STORAGE_KEY_GLOBAL_FONT_WEIGHT),
+            iconSize: localStorage.getItem(LOCAL_STORAGE_KEY_ICON_SIZE),
+            buttonSize: localStorage.getItem(LOCAL_STORAGE_KEY_BUTTON_SIZE),
+            hljsColors: {},
+            hljsFontFamily: localStorage.getItem(LOCAL_STORAGE_KEY_HLJS_FONT_FAMILY),
+            isHljsCustomizationEnabled: state.isHljsCustomizationEnabled,
+            mesCodeBgColor: localStorage.getItem(LOCAL_STORAGE_KEY_MES_CODE_BG_COLOR),
+            mesCodeTextColor: localStorage.getItem(LOCAL_STORAGE_KEY_MES_CODE_TEXT_COLOR),
+            mesCodeBorderColor: localStorage.getItem(LOCAL_STORAGE_KEY_MES_CODE_BORDER_COLOR),
+            mesCodeFontFamily: localStorage.getItem(LOCAL_STORAGE_KEY_MES_CODE_FONT_FAMILY),
+            quoteTextColor: localStorage.getItem(LOCAL_STORAGE_KEY_QUOTE_TEXT_COLOR),
+            quoteBgColor: localStorage.getItem(LOCAL_STORAGE_KEY_QUOTE_BG_COLOR),
+            quoteBorderColor: localStorage.getItem(LOCAL_STORAGE_KEY_QUOTE_BORDER_COLOR),
+            localFonts: state.localFonts,
+            multilangEnabled: state.multilangEnabled,
+            fontPresets: state.fontPresets,
+            autoPresetRules: state.autoPresetRules,
+            autoPresetSwitchingEnabled: state.autoPresetSwitchingEnabled,
+            multilangFonts: {}
+        },
+        colorPalette: {}
+    };
+
+    Object.values(hljsScopeSettings).forEach(scope => {
+        packData.settings.hljsColors[scope.lsKey] = localStorage.getItem(scope.lsKey);
+    });
+    Object.keys(colorSettings).forEach(key => {
+        packData.colorPalette[key] = localStorage.getItem(colorSettings[key].lsKey);
+    });
+
+    Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+        packData.settings.multilangFonts[langKey] = {
+            fontFamily: state[langConfig.stateKey],
+            fontUrl: state[langConfig.urlKey]
+        };
+    });
+
+    const jsonString = JSON.stringify(packData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = docContext.createElement('a');
+    a.href = url;
+    a.download = `font-manager-pack-${new Date().toISOString().slice(0, 10)}.json`;
+    docContext.body.appendChild(a);
+    a.click();
+    docContext.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function createQuickBackup() {
+    // ... (This function remains the same as previous versions)
+}
+
+function resetToDefaultFont() {
+    const globalStyleElement = docContext.getElementById('font-manager-global-font');
+    if (globalStyleElement) {
+        globalStyleElement.textContent = '';
+    }
+    state.activeFont = null;
+    localStorage.removeItem(LOCAL_STORAGE_KEY_ACTIVE_FONT);
+    showNotification('폰트가 페이지 기본 설정으로 재설정되었습니다.');
+    if (modalBodyElement) renderCombinedMainView();
+}
+
+function handleFontPackFileSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/json') {
+        showNotification('유효한 .json 폰트 팩 파일을 선택해주세요!');
+        event.target.value = null;
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            processImportedFontPackData(JSON.parse(e.target.result));
+        } catch (err) {
+            console.error('Font Manager: Error parsing font pack file:', err);
+            showNotification('폰트 팩 파일을 파싱할 수 없습니다. 파일이 손상되었거나 형식이 올바르지 않을 수 있습니다.');
+        }
+        event.target.value = null;
+    };
+    reader.onerror = () => {
+        showNotification('폰트 팩 파일을 읽는 중 오류가 발생했습니다.');
+        event.target.value = null;
+    };
+    reader.readAsText(file);
+}
+
+function processImportedFontPackData(data) {
+    if (typeof data !== 'object' || data === null) {
+        showNotification('가져오기 실패: 폰트 팩 파일 형식이 유효하지 않습니다.');
+        return;
+    }
+
+    //createQuickBackup();
+
+    let confirmationMessage = '현재 폰트 설정과 가져온 @import 규칙을 덮어씁니다.\n\n';
+    if (data.version !== FONT_PACK_VERSION) {
+        confirmationMessage += `경고: 폰트 팩 버전(${data.version || '알 수 없음'})이 현재 스크립트가 예상하는 버전(${FONT_PACK_VERSION})과 일치하지 않습니다. 계속 가져오면 일부 설정이 올바르게 적용되지 않거나 예기치 않은 동작이 발생할 수 있습니다.\n\n`;
+    }
+    confirmationMessage += '계속하시겠습니까?';
+
+    if (!confirm(confirmationMessage)) return;
+
+    try {
+        docContext.head.querySelectorAll('style[id^="font-manager-runtime-import-"]').forEach(style => style.remove());
+
+        const settings = data.settings || {};
+        const colorPalette = data.colorPalette || {};
+
+        state.importedFontFamilies = Array.isArray(settings.importedFontFamilies) ? settings.importedFontFamilies : [];
+        state.fontImportUrls = Array.isArray(settings.fontImportUrls) ? settings.fontImportUrls : [];
+        saveFontsToStorage();
+        saveFontImportUrlsToStorage();
+
+        if (Array.isArray(settings.localFonts) && settings.localFonts.length > 0) {
+            docContext.querySelectorAll('style[id^="font-manager-local-font-"]').forEach(style => style.remove());
+            state.localFonts = settings.localFonts;
+            applyLocalFontsToPage();
+        }
+
+        state.fontPresets = Array.isArray(settings.fontPresets) ? settings.fontPresets : [];
+        saveFontPresetsToStorage();
+
+        state.autoPresetRules = Array.isArray(settings.autoPresetRules) ? settings.autoPresetRules : [];
+        saveAutoPresetRulesToStorage();
+
+        state.autoPresetSwitchingEnabled = settings.autoPresetSwitchingEnabled !== undefined ? settings.autoPresetSwitchingEnabled : true;
+        saveAutoPresetSwitchingEnabledToStorage();
+
+        state.multilangEnabled = !!settings.multilangEnabled;
+        if (settings.multilangFonts && typeof settings.multilangFonts === 'object') {
+            Object.entries(languageTypes).forEach(([langKey, langConfig]) => {
+                const langSetting = settings.multilangFonts[langKey];
+                if (langSetting && typeof langSetting === 'object') {
+                    state[langConfig.stateKey] = langSetting.fontFamily || null;
+                    state[langConfig.urlKey] = langSetting.fontUrl || null;
+                } else if (typeof langSetting === 'string') {
+                    state[langConfig.stateKey] = langSetting || null;
+                    state[langConfig.urlKey] = null;
+                } else {
+                    state[langConfig.stateKey] = null;
+                    state[langConfig.urlKey] = null;
+                }
+            });
+        }
+        saveMultilangSettings();
+        applyMultilangCSS();
+
+        state.fontImportUrls.forEach((url, i) => {
+            if (url && typeof url === 'string') {
+                const styleTag = docContext.createElement('style');
+                styleTag.id = `font-manager-runtime-import-pack-${Date.now()}-${i}`;
+                styleTag.textContent = `@import url('${url}');`;
+                docContext.head.appendChild(styleTag);
+            }
+        });
+
+        settings.activeFont ? applyFontToBody(settings.activeFont) : resetToDefaultFont();
+        settings.globalFontSize ? applyGlobalFontSize(parseFloat(settings.globalFontSize)) : applyGlobalFontSize(null);
+        settings.globalFontWeight ? applyGlobalFontWeight(parseInt(settings.globalFontWeight, 10)) : applyGlobalFontWeight(null);
+        settings.iconSize ? applyIconSize(parseFloat(settings.iconSize)) : applyIconSize(null);
+        settings.buttonSize ? applyButtonSize(parseFloat(settings.buttonSize)) : applyButtonSize(null);
+
+        Object.keys(colorSettings).forEach(key => {
+            colorPalette[key] ? applyColorSetting(key, colorPalette[key]) : resetColorSetting(key);
+        });
+        
+        state.isHljsCustomizationEnabled = settings.isHljsCustomizationEnabled ?? false;
+        localStorage.setItem(LOCAL_STORAGE_KEY_HLJS_CUSTOMIZATION_ENABLED, state.isHljsCustomizationEnabled);
+
+        if (state.isHljsCustomizationEnabled) {
+            if (settings.hljsColors && typeof settings.hljsColors === 'object') {
+                applyHljsStyling(Object.fromEntries(
+                    Object.values(hljsScopeSettings)
+                        .map(scope => [scope.stateKey, settings.hljsColors[scope.lsKey]])
+                        .filter(([, color]) => color)
+                ), true);
+            }
+            settings.hljsFontFamily ? applyHljsFontFamily(settings.hljsFontFamily) : applyHljsFontFamily(null);
+        } else {
+            resetHljsStyling(false);
+        }
+        
+        resetMessageInlineCodeStyles(false);
+        const mesCodeStyles = {
+            bgColor: settings.mesCodeBgColor,
+            textColor: settings.mesCodeTextColor,
+            borderColor: settings.mesCodeBorderColor,
+        };
+        if (Object.values(mesCodeStyles).some(v => v)) {
+            applyMessageInlineCodeStyles(mesCodeStyles, true);
+        }
+        settings.mesCodeFontFamily ? applyMesCodeFontFamily(settings.mesCodeFontFamily) : applyMesCodeFontFamily(null);
+        
+        resetQuoteStyles(false);
+        const quoteStyles = {
+            textColor: settings.quoteTextColor,
+            bgColor: settings.quoteBgColor,
+            borderColor: settings.quoteBorderColor,
+        };
+        if (Object.values(quoteStyles).some(v => v)) {
+            applyQuoteStyles(quoteStyles, true);
+        }
+
+
+        renderCombinedMainView();
+        showNotification('폰트 팩 가져오기 성공!');
+        setTimeout(debouncedCheckAndApplyAutoPreset, 300);
+
+    } catch (error) {
+        console.error('가져온 폰트 팩 데이터 처리 중 오류 발생:', error);
+        showNotification(`가져오기 실패: ${error.message}`);
+    }
+}
+
+/** [기능 수정] 전역 폰트 크기 적용 */
+function applyGlobalFontSize(sizeInPx) {
+    const htmlElement = docContext.documentElement;
+
+    if (sizeInPx === null || isNaN(sizeInPx)) {
+        htmlElement.style.removeProperty('--mainFontSize');
+        localStorage.removeItem(LOCAL_STORAGE_KEY_GLOBAL_FONT_SIZE);
+        state.globalFontSize = null;
+        return;
+    }
+
+    // 폰트 크기 적용 및 저장, 크기 제한 없음
+    htmlElement.style.setProperty('--mainFontSize', `${sizeInPx}px`);
+    localStorage.setItem(LOCAL_STORAGE_KEY_GLOBAL_FONT_SIZE, sizeInPx.toString());
+    state.globalFontSize = sizeInPx;
+}
+
+/** [신규 기능] 전역 폰트 굵기 적용 */
+function applyGlobalFontWeight(weight) {
+    const htmlElement = docContext.documentElement;
+    if (weight && !isNaN(weight)) {
+        htmlElement.style.setProperty('--mainFontWeight', weight.toString());
+        localStorage.setItem(LOCAL_STORAGE_KEY_GLOBAL_FONT_WEIGHT, weight.toString());
+        state.globalFontWeight = weight;
+    } else {
+        htmlElement.style.removeProperty('--mainFontWeight');
+        localStorage.removeItem(LOCAL_STORAGE_KEY_GLOBAL_FONT_WEIGHT);
+        state.globalFontWeight = null;
+    }
+    applyGlobalFontToAllElements(state.activeFont);
+}
+
+function applyIconSize(sizeInPx) {
+    const htmlElement = docContext.documentElement;
+    if (sizeInPx) {
+        const newSizeString = `${sizeInPx}px`;
+        htmlElement.style.setProperty('--icon-actual-size', newSizeString);
+        localStorage.setItem(LOCAL_STORAGE_KEY_ICON_SIZE, sizeInPx.toString());
+        state.iconSize = sizeInPx;
+    } else {
+        htmlElement.style.removeProperty('--icon-actual-size');
+        localStorage.removeItem(LOCAL_STORAGE_KEY_ICON_SIZE);
+        state.iconSize = null;
+    }
+}
+
+function applyButtonSize(sizeInPx) {
+    const htmlElement = docContext.documentElement;
+    if (sizeInPx) {
+        const newSizeString = `${sizeInPx}px`;
+        htmlElement.style.setProperty('--button-size', newSizeString);
+        localStorage.setItem(LOCAL_STORAGE_KEY_BUTTON_SIZE, sizeInPx.toString());
+        state.buttonSize = sizeInPx;
+    } else {
+        htmlElement.style.removeProperty('--button-size');
+        localStorage.removeItem(LOCAL_STORAGE_KEY_BUTTON_SIZE);
+        state.buttonSize = null;
+    }
+}
+
+function applyColorSetting(settingKey, newColor) {
+    const setting = colorSettings[settingKey];
+    docContext.documentElement.style.setProperty(setting.cssVar, newColor);
+    localStorage.setItem(setting.lsKey, newColor);
+    state[settingKey + 'Color'] = newColor;
+}
+
+function resetColorSetting(settingKey) {
+    const setting = colorSettings[settingKey];
+    docContext.documentElement.style.removeProperty(setting.cssVar);
+    localStorage.removeItem(setting.lsKey);
+    state[settingKey + 'Color'] = setting.initialValue;
+    const inputElement = docContext.getElementById(setting.inputId);
+    if (inputElement) {
+        const parsed = parseColor(setting.initialValue);
+        inputElement.value = `#${parsed.r.toString(16).padStart(2, '0')}${parsed.g.toString(16).padStart(2, '0')}${parsed.b.toString(16).padStart(2, '0')}`;
+        if (inputElement.nextElementSibling) inputElement.nextElementSibling.textContent = inputElement.value;
+    }
+}
+
+function applyAIMessageScale(scaleFactor) {
+    const htmlElement = docContext.documentElement;
+    if (scaleFactor) {
+        htmlElement.style.setProperty('--ac-font-scale', String(scaleFactor));
+        localStorage.setItem(LOCAL_STORAGE_KEY_AI_MESSAGE_SCALE, String(scaleFactor));
+        state.aiMessageScale = scaleFactor;
+    } else {
+        htmlElement.style.removeProperty('--ac-font-scale');
+        localStorage.removeItem(LOCAL_STORAGE_KEY_AI_MESSAGE_SCALE);
+        state.aiMessageScale = null;
+    }
+}
+
+function handleImportLocalFont() {
+    const fileInput = docContext.getElementById('fontManagerLocalFontFileInput');
+    const nameInput = docContext.getElementById('fontManagerLocalFontNameInput');
+    const file = fileInput.files[0];
+    const fontFamilyName = nameInput.value.trim();
+
+    if (!file || !fontFamilyName) {
+        showNotification('.ttf 파일을 선택하고 이름을 지정해주세요.');
+        return;
+    }
+    if (state.importedFontFamilies.includes(fontFamilyName) || state.localFonts.some(f => f.fontName === fontFamilyName)) {
+        showNotification(`이름 \"${fontFamilyName}\"이(가) 이미 사용 중입니다.`);
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const fontDataUrl = e.target.result;
+            const styleId = `font-manager-local-font-${fontFamilyName.replace(/\s+/g, '-')}`;
+            const styleElement = docContext.createElement('style');
+            styleElement.id = styleId;
+            styleElement.textContent = `@font-face { font-family: '${fontFamilyName}'; src: url('${fontDataUrl}') format('truetype'); font-display: swap; }`;
+            docContext.head.appendChild(styleElement);
+
+            saveLocalFontToIndexedDB(fontFamilyName, fontDataUrl, file.name)
+                .then(() => {
+                    state.localFonts.push({ fontName: fontFamilyName, fontDataUrl, fileName: file.name, dateAdded: new Date().toISOString() });
+                    state.importedFontFamilies.push(fontFamilyName);
+                    saveFontsToStorage();
+                    showNotification(`로컬 폰트 \"${fontFamilyName}\"이(가) 성공적으로 가져와지고 영구 저장되었습니다.`);
+                    fileInput.value = '';
+                    nameInput.value = '';
+                    renderCombinedMainView();
+                })
+                .catch(error => {
+                    showNotification(`폰트는 로드되었지만 영구 저장에 실패했습니다: ${error.message || error}`, 'error');
+                });
+        } catch (err) {
+            showNotification('로컬 폰트 파일 처리 중 오류 발생: ' + (err.message || err), 'error');
+        }
+    };
+    reader.onerror = (err) => showNotification('로컬 폰트 파일 읽기 중 오류 발생: ' + (err.message || err), 'error');
+    reader.readAsDataURL(file);
+}
+
+// ========= Styling Functions =========
+
+function getInitialHljsStyles() {
+    const tempContainer = docContext.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.visibility = 'hidden';
+
+    // 모든 hljs 자식 요소를 포함하는 구조 생성
+    const pre = docContext.createElement('pre');
+    pre.className = 'hljs';
+    Object.values(hljsScopeSettings).forEach(scope => {
+        if (scope.representativeClass && scope.representativeClass !== 'hljs') {
+            const span = docContext.createElement('span');
+            span.className = scope.representativeClass;
+            pre.appendChild(span);
+        }
+    });
+    tempContainer.appendChild(pre);
+    docContext.body.appendChild(tempContainer);
+
+    // 스타일을 하나씩 가져오기
+    Object.values(hljsScopeSettings).forEach(scope => {
+        try {
+            let elementToMeasure = pre;
+            if (scope.representativeClass && scope.representativeClass !== 'hljs') {
+                elementToMeasure = tempContainer.querySelector(`.${scope.representativeClass}`);
+            }
+            if (elementToMeasure) {
+                const computed = getComputedStyle(elementToMeasure);
+                const propName = scope.cssProperty.replace(/-(\w)/g, (m, p1) => p1.toUpperCase());
+                state[scope.initialValueKey] = computed[propName] || scope.defaultCssValue;
+            } else {
+                state[scope.initialValueKey] = scope.defaultCssValue;
+            }
+        } catch (e) {
+            console.warn(`Font Manager: Could not get initial HLJS style for ${scope.label}.`, e);
+            state[scope.initialValueKey] = scope.defaultCssValue;
+        }
+    });
+    docContext.body.removeChild(tempContainer);
+}
+
+function getInitialMessageInlineCodeStyles() {
+    const tempParent = docContext.createElement('div');
+    tempParent.className = 'mes_text';
+    tempParent.style.position = 'absolute';
+    tempParent.style.left = '-9999px';
+    tempParent.style.visibility = 'hidden';
+    const tempElement = docContext.createElement('code');
+    tempParent.appendChild(tempElement);
+    docContext.body.appendChild(tempParent);
+
+    try {
+        const computed = getComputedStyle(tempElement);
+        state.initialMesCodeBgColor = computed.backgroundColor || state.initialMesCodeBgColor;
+        state.initialMesCodeTextColor = computed.color || state.initialMesCodeTextColor;
+        state.initialMesCodeBorderColor = computed.borderColor || state.initialMesCodeBorderColor;
+    } catch (e) {
+        console.warn('Font Manager: Could not compute initial .mes_text code styles.', e);
+    }
+    docContext.body.removeChild(tempParent);
+}
+
+function getInitialQuoteStyles() {
+    const tempElement = docContext.createElement('blockquote');
+    tempElement.style.visibility = 'hidden';
+    tempElement.style.position = 'absolute';
+    tempElement.style.left = '-9999px';
+    docContext.body.appendChild(tempElement);
+    try {
+        const computed = getComputedStyle(tempElement);
+        state.initialQuoteTextColor = computed.color || state.initialQuoteTextColor;
+        state.initialQuoteBgColor = computed.backgroundColor || state.initialQuoteBgColor;
+        state.initialQuoteBorderColor = computed.borderLeftColor || state.initialQuoteBorderColor;
+    } catch (e) {
+        console.warn('Font Manager: Could not compute initial blockquote styles.', e);
+    }
+    docContext.body.removeChild(tempElement);
+}
+
+function updateHljsBackground() {
+    const colorInput = docContext.getElementById('hljsBackgroundColorInput');
+    const opacitySlider = docContext.getElementById('hljsBackgroundOpacitySlider');
+    if (!colorInput || !opacitySlider) return;
+    const rgb = hexToRgb(colorInput.value);
+    if (!rgb) return;
+    const opacity = parseFloat(opacitySlider.value);
+    const newRgbaColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity.toFixed(2)})`;
+    applyHljsStyling({ hljsBackgroundColor: newRgbaColor });
+}
+
+function applyHljsStyling(newColorsObject, fromImport = false) {
+    if (!state.isHljsCustomizationEnabled && !fromImport) return;
+
+    Object.entries(newColorsObject).forEach(([stateKey, newColor]) => {
+        const scope = Object.values(hljsScopeSettings).find(s => s.stateKey === stateKey);
+        if (!scope || newColor === undefined || newColor === null) return;
+
+        state[scope.stateKey] = newColor;
+        if (!fromImport) {
+            localStorage.setItem(scope.lsKey, newColor);
+        }
+        docContext.querySelectorAll(scope.selectors.join(', ')).forEach(el => {
+            el.style.setProperty(scope.cssProperty, newColor, 'important');
+        });
+    });
+}
+
+/**
+ * HLJS 스타일을 초기화하고 테마 기본값으로 복원
+ * @param {boolean} showNotif - 알림 표시 및 UI 다시 렌더링 여부, 기본값은 true
+ */
+function resetHljsStyling(showNotif = true) {
+    Object.values(hljsScopeSettings).forEach(scope => {
+        localStorage.removeItem(scope.lsKey);
+        state[scope.stateKey] = null;
+        docContext.querySelectorAll(scope.selectors.join(', ')).forEach(el => {
+            el.style.removeProperty(scope.cssProperty);
+        });
+    });
+    applyHljsFontFamily(null);
+
+    if (showNotif && modalBodyElement) {
+        showNotification('HLJS 스타일이 테마 기본값으로 초기화되었습니다.');
+        renderCombinedMainView();
+    }
+}
+
+function updateMesCodeBackground() {
+    const colorInput = docContext.getElementById('mesCodeBgColorInput');
+    const opacitySlider = docContext.getElementById('mesCodeBackgroundOpacitySlider');
+    if (!colorInput || !opacitySlider) return;
+    const rgb = hexToRgb(colorInput.value);
+    if (!rgb) return;
+    const opacity = parseFloat(opacitySlider.value);
+    const newRgbaColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${opacity.toFixed(2)})`;
+    applyMessageInlineCodeStyles({ bgColor: newRgbaColor });
+}
+
+function applyMessageInlineCodeStyles(styles, fromImport = false) {
+    const { bgColor, textColor, borderColor } = styles;
+    const elements = docContext.querySelectorAll('.mes_text code');
+
+    if (bgColor !== undefined) {
+        state.mesCodeBgColor = bgColor;
+        if (!fromImport && bgColor) localStorage.setItem(LOCAL_STORAGE_KEY_MES_CODE_BG_COLOR, bgColor);
+        elements.forEach(el => el.style.setProperty('background-color', bgColor, 'important'));
+    }
+    if (textColor !== undefined) {
+        state.mesCodeTextColor = textColor;
+        if (!fromImport && textColor) localStorage.setItem(LOCAL_STORAGE_KEY_MES_CODE_TEXT_COLOR, textColor);
+        elements.forEach(el => el.style.setProperty('color', textColor, 'important'));
+    }
+    if (borderColor !== undefined) {
+        state.mesCodeBorderColor = borderColor;
+        if (!fromImport && borderColor) localStorage.setItem(LOCAL_STORAGE_KEY_MES_CODE_BORDER_COLOR, borderColor);
+        elements.forEach(el => el.style.setProperty('border-color', borderColor, 'important'));
+    }
+}
+
+function resetMessageInlineCodeStyles(showNotif = true) {
+    const keys = [LOCAL_STORAGE_KEY_MES_CODE_BG_COLOR, LOCAL_STORAGE_KEY_MES_CODE_TEXT_COLOR, LOCAL_STORAGE_KEY_MES_CODE_BORDER_COLOR];
+    keys.forEach(key => localStorage.removeItem(key));
+
+    state.mesCodeBgColor = null;
+    state.mesCodeTextColor = null;
+    state.mesCodeBorderColor = null;
+
+    docContext.querySelectorAll('.mes_text code').forEach(el => {
+        el.style.removeProperty('background-color');
+        el.style.removeProperty('color');
+        el.style.removeProperty('border-color');
+    });
+
+    applyMesCodeFontFamily(null);
+    if(showNotif && modalBodyElement) {
+        showNotification('인라인 코드 스타일이 테마 기본값으로 초기화되었습니다.');
+        renderCombinedMainView();
+    }
+}
+
+function applyQuoteStyles(styles, fromImport = false) {
+    const { textColor, bgColor, borderColor } = styles;
+    const elements = docContext.querySelectorAll('.mes_text blockquote, blockquote');
+
+    if (textColor !== undefined && textColor !== null) {
+        state.quoteTextColor = textColor;
+        if (!fromImport) localStorage.setItem(LOCAL_STORAGE_KEY_QUOTE_TEXT_COLOR, textColor);
+        elements.forEach(el => el.style.setProperty('color', textColor, 'important'));
+    }
+    if (bgColor !== undefined && bgColor !== null) {
+        state.quoteBgColor = bgColor;
+        if (!fromImport) localStorage.setItem(LOCAL_STORAGE_KEY_QUOTE_BG_COLOR, bgColor);
+        elements.forEach(el => el.style.setProperty('background-color', bgColor, 'important'));
+    }
+    if (borderColor !== undefined && borderColor !== null) {
+        state.quoteBorderColor = borderColor;
+        if (!fromImport) localStorage.setItem(LOCAL_STORAGE_KEY_QUOTE_BORDER_COLOR, borderColor);
+        elements.forEach(el => el.style.setProperty('border-left-color', borderColor, 'important'));
+    }
+}
+
+function resetQuoteStyles(showNotif = true) {
+    const keys = [LOCAL_STORAGE_KEY_QUOTE_TEXT_COLOR, LOCAL_STORAGE_KEY_QUOTE_BG_COLOR, LOCAL_STORAGE_KEY_QUOTE_BORDER_COLOR];
+    keys.forEach(key => localStorage.removeItem(key));
+
+    state.quoteTextColor = null;
+    state.quoteBgColor = null;
+    state.quoteBorderColor = null;
+
+    docContext.querySelectorAll('.mes_text blockquote, blockquote').forEach(el => {
+        el.style.removeProperty('color');
+        el.style.removeProperty('background-color');
+        el.style.removeProperty('border-left-color');
+    });
+
+    if(showNotif && modalBodyElement) {
+        showNotification('인용문 블록 스타일이 테마 기본값으로 초기화되었습니다.');
+        renderCombinedMainView();
+    }
+}
+
+function applyHljsFontFamily(fontFamily) {
+    if (!state.isHljsCustomizationEnabled) {
+        fontFamily = null; // Force reset if customization is disabled
+    }
+    
+    state.hljsFontFamily = fontFamily || null;
+    if (fontFamily) {
+        localStorage.setItem(LOCAL_STORAGE_KEY_HLJS_FONT_FAMILY, fontFamily);
+    } else {
+        localStorage.removeItem(LOCAL_STORAGE_KEY_HLJS_FONT_FAMILY);
+    }
+    docContext.querySelectorAll('.hljs, pre code.hljs, code.hljs').forEach(el => {
+        fontFamily ? el.style.setProperty('font-family', fontFamily, 'important') : el.style.removeProperty('font-family');
+    });
+}
+
+function applyMesCodeFontFamily(fontFamily) {
+    state.mesCodeFontFamily = fontFamily || null;
+    if (fontFamily) {
+        localStorage.setItem(LOCAL_STORAGE_KEY_MES_CODE_FONT_FAMILY, fontFamily);
+    } else {
+        localStorage.removeItem(LOCAL_STORAGE_KEY_MES_CODE_FONT_FAMILY);
+    }
+    docContext.querySelectorAll('.mes_text code').forEach(el => {
+        fontFamily ? el.style.setProperty('font-family', fontFamily, 'important') : el.style.removeProperty('font-family');
+    });
+}
+
+function applyCurrentHljsStylesToElement(hljsBlockElement) {
+    if (!state.isHljsCustomizationEnabled) return;
+    
+    if (state.hljsFontFamily) {
+        hljsBlockElement.style.setProperty('font-family', state.hljsFontFamily, 'important');
+    }
+    Object.values(hljsScopeSettings).forEach(scope => {
+        const colorValue = state[scope.stateKey];
+        if (colorValue) {
+            // Special handling for the main .hljs element to avoid style conflicts on its children
+            if(scope.representativeClass === 'hljs'){
+                 hljsBlockElement.style.setProperty(scope.cssProperty, colorValue, 'important');
+            } else {
+                 // Apply to specific children
+                 hljsBlockElement.querySelectorAll(scope.selectors.join(', ')).forEach(childEl => {
+                     childEl.style.setProperty(scope.cssProperty, colorValue, 'important');
+                 });
+            }
+        }
+    });
+}
+
+function applyCurrentMesCodeStylesToElement(mesCodeElement) {
+    if (state.mesCodeFontFamily) {
+        mesCodeElement.style.setProperty('font-family', state.mesCodeFontFamily, 'important');
+    }
+    if (state.mesCodeBgColor) {
+        mesCodeElement.style.setProperty('background-color', state.mesCodeBgColor, 'important');
+    }
+    if (state.mesCodeTextColor) {
+        mesCodeElement.style.setProperty('color', state.mesCodeTextColor, 'important');
+    }
+    if (state.mesCodeBorderColor) {
+        mesCodeElement.style.setProperty('border-color', state.mesCodeBorderColor, 'important');
+    }
+}
+
+function applyCurrentQuoteStylesToElement(quoteElement) {
+    if (state.quoteTextColor) {
+        quoteElement.style.setProperty('color', state.quoteTextColor, 'important');
+    }
+    if (state.quoteBgColor) {
+        quoteElement.style.setProperty('background-color', state.quoteBgColor, 'important');
+    }
+    if (state.quoteBorderColor) {
+        quoteElement.style.setProperty('border-left-color', state.quoteBorderColor, 'important');
+    }
+}
+
+let dynamicContentObserver = null;
+function setupDynamicContentObserver() {
+    if (dynamicContentObserver) {
+        dynamicContentObserver.disconnect();
+    }
+    const targetNode = docContext.getElementById('chat') || docContext.getElementById('messages') || docContext.body;
+    const config = { childList: true, subtree: true };
+    const callback = (mutationsList) => {
+        for (const mutation of mutationsList) {
+            if (mutation.addedNodes.length) {
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === 1) { // 요소 노드인지 확인
+                        // HLJS
+                        if (node.matches && (node.matches('.hljs') || node.matches('pre code'))) {
+                            applyCurrentHljsStylesToElement(node);
+                        }
+                        node.querySelectorAll('.hljs, pre code').forEach(applyCurrentHljsStylesToElement);
+
+                        // Inline Code
+                        if (node.matches && node.matches('.mes_text code')) {
+                            applyCurrentMesCodeStylesToElement(node);
+                        }
+                        node.querySelectorAll('.mes_text code').forEach(applyCurrentMesCodeStylesToElement);
+
+                        // Quote Block
+                        if (node.matches && node.matches('.mes_text blockquote, blockquote')) {
+                            applyCurrentQuoteStylesToElement(node);
+                        }
+                        node.querySelectorAll('.mes_text blockquote, blockquote').forEach(applyCurrentQuoteStylesToElement);
+                    }
+                });
+            }
+        }
+    };
+    dynamicContentObserver = new MutationObserver(callback);
+    dynamicContentObserver.observe(targetNode, config);
+}
+
+// ========= Initialization =========
+function initializeFontManager() {
+    // Capture initial values from CSS
+    try {
+        const cs = window.getComputedStyle(docContext.documentElement);
+        initialMainFontSizeFromCSS = cs.getPropertyValue('--mainFontSize').trim() || '18px';
+        initialMainFontSizeNumber = parseFloat(initialMainFontSizeFromCSS);
+        initialMainFontWeightFromCSS = cs.getPropertyValue('--mainFontWeight').trim() || '400';
+        initialMainFontWeightNumber = parseInt(initialMainFontWeightFromCSS, 10);
+        initialIconSizeFromCSS = cs.getPropertyValue('--icon-actual-size').trim() || '45px';
+        initialIconSizeNumber = parseFloat(initialIconSizeFromCSS);
+        initialButtonSizeFromCSS = cs.getPropertyValue('--button-size').trim() || '32px';
+        initialButtonSizeNumber = parseFloat(initialButtonSizeFromCSS);
+    } catch (e) { console.warn("Font Manager: Could not read all initial CSS variables.", e); }
+
+    getInitialHljsStyles();
+    getInitialMessageInlineCodeStyles();
+    getInitialQuoteStyles();
+
+    loadFontsFromStorage();
+    loadFontImportUrlsFromStorage();
+    loadMultilangSettings();
+    loadFontPresetsFromStorage();
+    loadAutoPresetRulesFromStorage();
+    loadLocalFontsFromIndexedDB().then(applyLocalFontsToPage);
+
+    // Apply saved settings from localStorage
+    state.fontImportUrls.forEach(url => {
+        const style = docContext.createElement('style');
+        style.textContent = `@import url('${url}');`;
+        docContext.head.appendChild(style);
+    });
+
+    const activeFont = localStorage.getItem(LOCAL_STORAGE_KEY_ACTIVE_FONT);
+    if (activeFont) applyFontToBody(activeFont);
+
+    applyGlobalFontSize(parseFloat(localStorage.getItem(LOCAL_STORAGE_KEY_GLOBAL_FONT_SIZE)));
+    applyGlobalFontWeight(parseInt(localStorage.getItem(LOCAL_STORAGE_KEY_GLOBAL_FONT_WEIGHT), 10));
+    applyIconSize(parseFloat(localStorage.getItem(LOCAL_STORAGE_KEY_ICON_SIZE)));
+    applyButtonSize(parseFloat(localStorage.getItem(LOCAL_STORAGE_KEY_BUTTON_SIZE)));
+
+    Object.keys(colorSettings).forEach(key => {
+        const savedColor = localStorage.getItem(colorSettings[key].lsKey);
+        if (savedColor) applyColorSetting(key, savedColor);
+    });
+
+    const savedToggleState = localStorage.getItem(LOCAL_STORAGE_KEY_HLJS_CUSTOMIZATION_ENABLED);
+    state.isHljsCustomizationEnabled = savedToggleState === 'true';
+
+    if(state.isHljsCustomizationEnabled) {
+        const hljsColors = Object.fromEntries(
+            Object.values(hljsScopeSettings)
+                .map(scope => [scope.stateKey, localStorage.getItem(scope.lsKey)])
+                .filter(([, color]) => color)
+        );
+        if (Object.keys(hljsColors).length > 0) applyHljsStyling(hljsColors);
+        applyHljsFontFamily(localStorage.getItem(LOCAL_STORAGE_KEY_HLJS_FONT_FAMILY));
+    }
+
+    const mesCodeStyles = {
+        bgColor: localStorage.getItem(LOCAL_STORAGE_KEY_MES_CODE_BG_COLOR),
+        textColor: localStorage.getItem(LOCAL_STORAGE_KEY_MES_CODE_TEXT_COLOR),
+        borderColor: localStorage.getItem(LOCAL_STORAGE_KEY_MES_CODE_BORDER_COLOR),
+    };
+    if (Object.values(mesCodeStyles).some(v => v)) applyMessageInlineCodeStyles(mesCodeStyles);
+    applyMesCodeFontFamily(localStorage.getItem(LOCAL_STORAGE_KEY_MES_CODE_FONT_FAMILY));
+
+    const quoteStyles = {
+        textColor: localStorage.getItem(LOCAL_STORAGE_KEY_QUOTE_TEXT_COLOR),
+        bgColor: localStorage.getItem(LOCAL_STORAGE_KEY_QUOTE_BG_COLOR),
+        borderColor: localStorage.getItem(LOCAL_STORAGE_KEY_QUOTE_BORDER_COLOR),
+    };
+    if (Object.values(quoteStyles).some(v => v)) applyQuoteStyles(quoteStyles);
+
+
+    if (state.multilangEnabled) {
+        applyMultilangCSS();
+    }
+
+    injectStyles();
+    createExtensionMenuButton();
+    setupThemeChangeObserver();
+    setupDynamicContentObserver();
+    console.log('Font Manager initialized.');
+}
+
+// ========= 문서 로드 완료 후 초기화 =========
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeFontManager);
+} else {
+    initializeFontManager();
+}

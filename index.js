@@ -74,13 +74,42 @@ function getSillyTavernContext() {
     }
 }
 
-// 현재 선택된 테마 가져오기
+// 현재 선택된 테마 가져오기 (여러 방법 시도)
 function getCurrentTheme() {
     try {
+        // 방법 1: getContext() 사용
         const context = getSillyTavernContext();
-        if (context && context.power_user) {
-            return context.power_user.theme || 'Default';
+        if (context && context.power_user && context.power_user.theme) {
+            console.log(`[Font-Manager] 방법1 성공: ${context.power_user.theme}`);
+            return context.power_user.theme;
         }
+
+        // 방법 2: 전역 window 객체에서 직접 접근
+        if (window.power_user && window.power_user.theme) {
+            console.log(`[Font-Manager] 방법2 성공: ${window.power_user.theme}`);
+            return window.power_user.theme;
+        }
+
+        // 방법 3: SillyTavern 전역 객체에서 접근
+        if (window.SillyTavern && window.SillyTavern.getContext) {
+            const stContext = window.SillyTavern.getContext();
+            if (stContext && stContext.power_user && stContext.power_user.theme) {
+                console.log(`[Font-Manager] 방법3 성공: ${stContext.power_user.theme}`);
+                return stContext.power_user.theme;
+            }
+        }
+
+        // 방법 4: localStorage에서 테마 정보 확인
+        const savedSettings = localStorage.getItem('SillyTavern_Settings');
+        if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            if (settings.power_user && settings.power_user.theme) {
+                console.log(`[Font-Manager] 방법4 성공: ${settings.power_user.theme}`);
+                return settings.power_user.theme;
+            }
+        }
+
+        console.log('[Font-Manager] 모든 테마 감지 방법 실패');
     } catch (error) {
         console.warn('[Font-Manager] 현재 테마 정보 가져오기 실패:', error);
     }
@@ -152,6 +181,7 @@ async function getAvailableThemes() {
 
 // 테마 변경 관찰자 설정 (MutationObserver 사용)
 let themeChangeObserver = null;
+let lastDetectedTheme = null; // 마지막으로 감지된 테마 저장
 
 function setupThemeChangeListener() {
     try {
@@ -159,6 +189,9 @@ function setupThemeChangeListener() {
         if (themeChangeObserver) {
             themeChangeObserver.disconnect();
         }
+
+        // 콘솔 로그 모니터링 설정
+        setupConsoleLogMonitoring();
 
         // MutationObserver 설정
         const observerConfig = {
@@ -204,6 +237,59 @@ function setupThemeChangeListener() {
     }
 }
 
+// 콘솔 로그 모니터링으로 테마 변경 감지
+function setupConsoleLogMonitoring() {
+    // 원본 console.log 저장
+    const originalLog = console.log;
+    
+    // console.log 오버라이드
+    console.log = function(...args) {
+        // 원본 로그 실행
+        originalLog.apply(console, args);
+        
+        // "theme applied:" 메시지 감지
+        const message = args.join(' ');
+        if (message.includes('theme applied:')) {
+            const themeMatch = message.match(/theme applied:\s*(.+)/i);
+            if (themeMatch && themeMatch[1]) {
+                const themeName = themeMatch[1].trim();
+                console.log(`[Font-Manager] 콘솔에서 테마 변경 감지: "${themeName}"`);
+                
+                // 새로운 테마가 감지되면 프리셋 체크
+                if (lastDetectedTheme !== themeName) {
+                    lastDetectedTheme = themeName;
+                    setTimeout(() => {
+                        checkAndApplyAutoPresetWithTheme(themeName);
+                    }, 100); // 약간의 지연 후 실행
+                }
+            }
+        }
+    };
+}
+
+// 특정 테마 이름으로 프리셋 체크 및 적용
+function checkAndApplyAutoPresetWithTheme(detectedTheme) {
+    if (!settings?.themeBindings || settings.themeBindings.length === 0) {
+        return;
+    }
+
+    console.log(`[Font-Manager] 감지된 테마 "${detectedTheme}"로 프리셋 검색 중...`);
+
+    // 직접 테마 이름 매칭
+    const matchedBinding = settings.themeBindings.find(binding => 
+        binding.themeId.toLowerCase() === detectedTheme.toLowerCase()
+    );
+
+    if (matchedBinding) {
+        console.log(`[Font-Manager] 🎯 직접 매칭 성공: "${detectedTheme}" -> 프리셋 "${matchedBinding.presetId}"`);
+        applyPresetByTheme(matchedBinding.presetId);
+    } else {
+        console.log(`[Font-Manager] 💔 테마 "${detectedTheme}"에 대한 연동 프리셋이 없습니다.`);
+        // 기존 방식으로 다시 시도
+        debouncedCheckAndApplyAutoPreset();
+    }
+}
+
 // 폴백 이벤트 리스너
 function setupFallbackThemeListener() {
     try {
@@ -212,9 +298,31 @@ function setupFallbackThemeListener() {
             context.eventSource.on(context.event_types.SETTINGS_UPDATED, debouncedCheckAndApplyAutoPreset);
             console.log('[Font-Manager] 폴백 테마 변경 이벤트 리스너 등록됨');
         }
+
+        // 추가: 정기적으로 테마 변경 체크 (마지막 수단)
+        setupPeriodicThemeCheck();
     } catch (error) {
         console.warn('[Font-Manager] 폴백 이벤트 리스너 설정 실패:', error);
     }
+}
+
+// 정기적 테마 체크 (5초마다)
+let periodicCheckInterval = null;
+function setupPeriodicThemeCheck() {
+    if (periodicCheckInterval) {
+        clearInterval(periodicCheckInterval);
+    }
+
+    periodicCheckInterval = setInterval(() => {
+        const currentTheme = getCurrentTheme();
+        if (currentTheme && currentTheme !== lastDetectedTheme) {
+            console.log(`[Font-Manager] 정기 체크에서 테마 변경 감지: "${lastDetectedTheme}" -> "${currentTheme}"`);
+            lastDetectedTheme = currentTheme;
+            checkAndApplyAutoPresetWithTheme(currentTheme);
+        }
+    }, 5000); // 5초마다 체크
+
+    console.log('[Font-Manager] 정기적 테마 체크 시작 (5초 간격)');
 }
 
 // 디바운싱 함수
