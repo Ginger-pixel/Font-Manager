@@ -13,7 +13,8 @@ const defaultSettings = {
     fonts: [],
     presets: [],
     currentPreset: null,
-    enabled: true,
+    // 폰트 매니저 활성화 상태
+    isEnabled: true,
     // UI 폰트 조절 값들
     uiFontSize: 14,
     uiFontWeight: 0,
@@ -53,7 +54,7 @@ function initSettings() {
     settings.presets = settings.presets ?? [];
     settings.currentPreset = settings.currentPreset ?? null;
     settings.themeRules = settings.themeRules ?? [];
-    settings.enabled = settings.enabled ?? true;
+    settings.isEnabled = settings.isEnabled ?? true;
     // 조절값 기본값 보장
     settings.uiFontSize = settings.uiFontSize ?? 14;
     settings.uiFontWeight = settings.uiFontWeight ?? 0;
@@ -302,15 +303,9 @@ function renderPresetDropdown(template) {
 
 // 토글 섹션 렌더링
 function renderToggleSection(template) {
-    const toggle = template.find('#font-manager-enabled');
-    toggle.prop('checked', settings?.enabled ?? true);
-    
-    // 활성화 상태에 따라 CSS 클래스 적용
-    if (settings?.enabled) {
-        template.removeClass('font-manager-disabled');
-    } else {
-        template.addClass('font-manager-disabled');
-    }
+    const isEnabled = settings?.isEnabled ?? true;
+    const checkbox = template.find('#font-manager-enabled');
+    checkbox.prop('checked', isEnabled);
 }
 
 // UI 폰트 섹션 렌더링
@@ -624,8 +619,8 @@ function updateUIFont() {
         document.head.appendChild(fontStyle);
     }
     
-    // 폰트 매니저가 비활성화된 경우 빈 CSS 적용
-    if (!settings?.enabled) {
+    // 폰트 매니저가 비활성화되어 있으면 빈 스타일로 설정
+    if (!settings?.isEnabled) {
         fontStyle.innerHTML = '/* Font Manager Disabled */';
         return;
     }
@@ -663,7 +658,7 @@ function updateUIFont() {
     });
     
     // 현재 UI 폰트 적용
-    const currentFontName = tempUiFont !== undefined ? tempUiFont : getCurrentPresetUIFont();
+    const currentFontName = tempUiFont || getCurrentPresetUIFont();
     
     // 실제 사용할 font-family 이름 찾기
     let actualFontFamily = currentFontName;
@@ -693,7 +688,7 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 폰트가 선택되지 않았거나 기본 폰트를 선택한 경우 조절값만 적용
+        // 폰트가 선택되지 않았을 때는 기본 폰트로 초기화 + 조절값 적용
         uiFontCss.push(`
 /* UI FONT SIZE/WEIGHT APPLICATION - Font Manager Override */
 html body,
@@ -704,6 +699,7 @@ html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
+  font-family: inherit !important;
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
@@ -711,7 +707,7 @@ html body textarea:not(#send_textarea) {
     }
     
     // 현재 메시지 폰트 적용
-    const currentMessageFontName = tempMessageFont !== undefined ? tempMessageFont : getCurrentPresetMessageFont();
+    const currentMessageFontName = tempMessageFont || getCurrentPresetMessageFont();
     
     // 실제 사용할 메시지 font-family 이름 찾기
     let actualMessageFontFamily = currentMessageFontName;
@@ -739,16 +735,18 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 폰트가 선택되지 않았거나 기본 폰트를 선택한 경우 조절값만 적용
+        // 폰트가 선택되지 않았을 때는 기본 폰트로 초기화 + 조절값 적용
         uiFontCss.push(`
 /* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override */
 .mes * {
+  font-family: inherit !important;
   font-size: var(--font-manager-chat-size) !important;
   line-height: var(--font-manager-chat-line-height) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
 
 #send_form textarea {
+  font-family: inherit !important;
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
@@ -908,17 +906,9 @@ function setupEventListeners(template) {
     // 폰트 매니저 활성화 토글 이벤트
     template.find('#font-manager-enabled').off('change').on('change', function() {
         const isEnabled = $(this).is(':checked');
-        settings.enabled = isEnabled;
-        
-        // UI 업데이트
-        if (isEnabled) {
-            template.removeClass('font-manager-disabled');
-        } else {
-            template.addClass('font-manager-disabled');
-        }
-        
+        settings.isEnabled = isEnabled;
         saveSettingsDebounced();
-        updateUIFont();
+        updateUIFont(); // 즉시 적용/해제
     });
     
     // 프리셋 드롭다운 변경 이벤트
@@ -1002,17 +992,24 @@ function setupEventListeners(template) {
                 id: generateId(),
                 name: presetName,
                 uiFont: null,
-                messageFont: null
+                messageFont: null,
+                uiFontSize: settings.uiFontSize,
+                uiFontWeight: settings.uiFontWeight,
+                chatFontSize: settings.chatFontSize,
+                inputFontSize: settings.inputFontSize,
+                chatFontWeight: settings.chatFontWeight,
+                chatLineHeight: settings.chatLineHeight
             };
             
-                         // 프리셋 추가
-             settings.presets.push(newPreset);
+            // 프리셋 추가
+            settings.presets.push(newPreset);
             selectedPresetId = newPreset.id;
             saveSettingsDebounced();
             
             renderPresetDropdown(template);
             renderUIFontSection(template);
             renderMessageFontSection(template);
+            renderThemeLinkingSection(template); // 테마연동 드롭다운 업데이트
             setupEventListeners(template);
         }
     });
@@ -1020,15 +1017,21 @@ function setupEventListeners(template) {
     // UI 폰트 드롭다운 변경 이벤트
     template.find('#ui-font-dropdown').off('change').on('change', function() {
         const fontName = $(this).val();
-        // 빈 문자열("")은 기본 폰트를 의미하므로 null로 변환
-        applyTempUIFont(fontName || null);
+        if (fontName) {
+            applyTempUIFont(fontName);
+        } else {
+            applyTempUIFont(null); // 기본 폰트
+        }
     });
     
     // 메시지 폰트 드롭다운 변경 이벤트
     template.find('#message-font-dropdown').off('change').on('change', function() {
         const fontName = $(this).val();
-        // 빈 문자열("")은 기본 폰트를 의미하므로 null로 변환
-        applyTempMessageFont(fontName || null);
+        if (fontName) {
+            applyTempMessageFont(fontName);
+        } else {
+            applyTempMessageFont(null); // 기본 폰트
+        }
     });
     
     // UI 폰트 조절바 이벤트들
@@ -1244,9 +1247,6 @@ function saveCurrentSettingsToGlobal() {
     if (tempChatLineHeight !== null) {
         settings.chatLineHeight = tempChatLineHeight;
     }
-    
-    // enabled 설정도 저장 (이미 실시간으로 저장되지만 명시적으로 보장)
-    settings.enabled = settings.enabled ?? true;
     
     // 설정 저장
     saveSettingsDebounced();
