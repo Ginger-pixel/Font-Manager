@@ -603,7 +603,7 @@ function updateUIFont() {
 :root {
   --font-manager-ui-size: ${uiFontSize}px;
   --font-manager-ui-weight: ${uiFontWeight}px;
-  --font-manager-ui-color: ${uiFontColor && isValidHexColor(uiFontColor) ? '#' + uiFontColor : 'var(--SmartThemeBodyColor)'};
+  --font-manager-ui-color: ${uiFontColor ? '#' + uiFontColor : 'unset'};
   --font-manager-chat-size: ${chatFontSize}px;
   --font-manager-input-size: ${inputFontSize}px;
   --font-manager-chat-weight: ${chatFontWeight}px;
@@ -650,8 +650,9 @@ html body textarea:not(#send_textarea) {
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
 
+${uiFontColor ? `
 /* UI COLOR APPLICATION - Specific Elements Only */
-.drawer-icon:not(.mes_buttons *):not(.mes_edit *):not(.mes_block *) {
+.drawer-icon {
   color: var(--font-manager-ui-color) !important;
 }
 
@@ -673,42 +674,28 @@ html body textarea:not(#send_textarea) {
 }
 
 .drawer-content label:has(input) {
-  & *:not(.mes *):not(.mes_buttons *):not(.mes_edit *):not(.mes_block *) {
+  & * {
     color: var(--font-manager-ui-color) !important;
   }
 }
+` : ''}
 
-/* 메시지 영역 아이콘 보호 */
-.mes .mes_buttons,
-.mes .mes_edit,
-.mes .mes_block,
+/* 메시지 액션 버튼들은 색상 적용에서 제외 */
+.mes_edit_buttons,
 .mes_buttons,
-.mes_edit,
-.mes_block,
-.mes .fa-solid,
-.mes .fa-regular,
-.mes .fa-brands,
-.mes i[class*="fa-"],
-.mes .menuButton,
-.mes .menu_button {
+.extraMesButtons,
+.mes_edit_buttons .menu_button,
+.swipe_right,
+.swipe_left {
   color: inherit !important;
 }
 
-.mes .mes_buttons *,
-.mes .mes_edit *,
-.mes .mes_block *,
+.mes_edit_buttons *,
 .mes_buttons *,
-.mes_edit *,
-.mes_block *,
-.mes .mes_buttons i,
-.mes .mes_edit i,
-.mes .mes_block i,
-.mes .fa-solid,
-.mes .fa-regular,
-.mes .fa-brands,
-.mes i[class*="fa-"],
-.mes .menuButton *,
-.mes .menu_button * {
+.extraMesButtons *,
+.mes_edit_buttons .menu_button *,
+.swipe_right *,
+.swipe_left * {
   color: inherit !important;
 }
         `);
@@ -728,8 +715,9 @@ html body textarea:not(#send_textarea) {
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
 
+${uiFontColor ? `
 /* UI COLOR APPLICATION - Specific Elements Only */
-.drawer-icon:not(.mes_buttons *):not(.mes_edit *):not(.mes_block *) {
+.drawer-icon {
   color: var(--font-manager-ui-color) !important;
 }
 
@@ -751,42 +739,28 @@ html body textarea:not(#send_textarea) {
 }
 
 .drawer-content label:has(input) {
-  & *:not(.mes *):not(.mes_buttons *):not(.mes_edit *):not(.mes_block *) {
+  & * {
     color: var(--font-manager-ui-color) !important;
   }
 }
+` : ''}
 
-/* 메시지 영역 아이콘 보호 */
-.mes .mes_buttons,
-.mes .mes_edit,
-.mes .mes_block,
+/* 메시지 액션 버튼들은 색상 적용에서 제외 */
+.mes_edit_buttons,
 .mes_buttons,
-.mes_edit,
-.mes_block,
-.mes .fa-solid,
-.mes .fa-regular,
-.mes .fa-brands,
-.mes i[class*="fa-"],
-.mes .menuButton,
-.mes .menu_button {
+.extraMesButtons,
+.mes_edit_buttons .menu_button,
+.swipe_right,
+.swipe_left {
   color: inherit !important;
 }
 
-.mes .mes_buttons *,
-.mes .mes_edit *,
-.mes .mes_block *,
+.mes_edit_buttons *,
 .mes_buttons *,
-.mes_edit *,
-.mes_block *,
-.mes .mes_buttons i,
-.mes .mes_edit i,
-.mes .mes_block i,
-.mes .fa-solid,
-.mes .fa-regular,
-.mes .fa-brands,
-.mes i[class*="fa-"],
-.mes .menuButton *,
-.mes .menu_button * {
+.extraMesButtons *,
+.mes_edit_buttons .menu_button *,
+.swipe_right *,
+.swipe_left * {
   color: inherit !important;
 }
         `);
