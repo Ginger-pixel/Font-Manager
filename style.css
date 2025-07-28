@@ -367,8 +367,8 @@
     background-color: var(--black30a);
     overflow-y: auto;
     overflow-x: hidden;
-    min-height: 150px;
-    max-height: 200px;
+    min-height: 300px;
+    max-height: 400px;
     width: 100%;
     box-sizing: border-box;
 }
@@ -850,6 +850,12 @@
     background-color: var(--black30a);
     width: 100%;
     box-sizing: border-box;
+    color: var(--SmartThemeBodyColor);
+}
+
+.multi-language-font-section label,
+.multi-language-font-section span {
+    color: var(--SmartThemeBodyColor) !important;
 }
 
 .multi-language-font-section.disabled-section {
@@ -873,9 +879,13 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    color: var(--SmartThemeBodyColor);
-    font-size: calc(var(--mainFontSize) * 0.95);
+    color: var(--SmartThemeBodyColor) !important;
+    font-size: var(--mainFontSize);
     user-select: none;
+}
+
+.multi-language-toggle-label span {
+    color: var(--SmartThemeBodyColor) !important;
 }
 
 .multi-language-toggle {
@@ -896,11 +906,21 @@
     pointer-events: none;
 }
 
+.multi-language-font-selectors.disabled-section .language-label {
+    color: var(--SmartThemeBodyColor) !important;
+    opacity: 0.6;
+}
+
+.multi-language-font-selectors.disabled-section .multi-language-toggle-label span {
+    color: var(--SmartThemeBodyColor) !important;
+    opacity: 0.6;
+}
+
 .language-font-group {
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 10px;
-    background-color: var(--black50a);
+    background-color: var(--black30a);
 }
 
 .language-font-row {
@@ -911,7 +931,7 @@
 
 .language-label {
     min-width: 60px;
-    color: var(--SmartThemeBodyColor);
+    color: var(--SmartThemeBodyColor) !important;
     font-size: calc(var(--mainFontSize) * 0.9);
     font-weight: 500;
     text-align: left;
