@@ -1129,7 +1129,11 @@ function setupEventListeners(template) {
             presetId: presetId
         };
         
+        console.log("Font Manager: 새 테마 연동 규칙 추가:", newRule);
+        
         settings.themeRules.push(newRule);
+        
+        console.log("Font Manager: 현재 등록된 모든 테마 규칙:", settings.themeRules);
         
         // UI 초기화 및 업데이트
         template.find('#theme-name-input').val('');
@@ -1293,12 +1297,22 @@ function updateAllFonts() {
 
 // 테마 감지 및 자동 프리셋 적용 시작
 function startThemeDetection() {
+    console.log("Font Manager: 테마 감지 초기화 중...");
+    
+    // 현재 등록된 테마 규칙들 로그
+    const themeRules = settings?.themeRules || [];
+    console.log("Font Manager: 등록된 테마 규칙들:", themeRules);
+    
     // 페이지 로드 시 한 번 실행
-    setTimeout(checkAndApplyThemePreset, 1000);
+    setTimeout(() => {
+        console.log("Font Manager: 초기 테마 검사 시작 (1초 후)");
+        checkAndApplyThemePreset();
+    }, 1000);
     
     // MutationObserver로 DOM 변화 감지
     const observer = new MutationObserver((mutations) => {
         let shouldCheck = false;
+        let changeDetails = [];
         
         mutations.forEach((mutation) => {
             // link 태그 변화 감지
@@ -1307,12 +1321,14 @@ function startThemeDetection() {
                     if (node.nodeType === Node.ELEMENT_NODE && 
                         (node.tagName === 'LINK' || node.querySelector('link'))) {
                         shouldCheck = true;
+                        changeDetails.push(`새 링크 태그 추가: ${node.tagName === 'LINK' ? node.href : '하위 링크'}`);
                     }
                 });
                 mutation.removedNodes.forEach((node) => {
                     if (node.nodeType === Node.ELEMENT_NODE && 
                         (node.tagName === 'LINK' || node.querySelector('link'))) {
                         shouldCheck = true;
+                        changeDetails.push(`링크 태그 제거: ${node.tagName === 'LINK' ? node.href : '하위 링크'}`);
                     }
                 });
             }
@@ -1321,13 +1337,18 @@ function startThemeDetection() {
                      mutation.target.tagName === 'LINK' && 
                      mutation.attributeName === 'href') {
                 shouldCheck = true;
+                changeDetails.push(`링크 href 변경: ${mutation.target.href}`);
             }
         });
         
         if (shouldCheck) {
+            console.log("Font Manager: DOM 변화 감지됨:", changeDetails);
             // 짧은 지연 후 실행 (여러 변화가 동시에 일어날 수 있음)
             clearTimeout(window.fontManagerThemeCheckTimeout);
-            window.fontManagerThemeCheckTimeout = setTimeout(checkAndApplyThemePreset, 300);
+            window.fontManagerThemeCheckTimeout = setTimeout(() => {
+                console.log("Font Manager: DOM 변화로 인한 테마 검사 시작");
+                checkAndApplyThemePreset();
+            }, 300);
         }
     });
     
@@ -1345,62 +1366,120 @@ function startThemeDetection() {
         attributeFilter: ['href'] 
     });
     
-    console.log("Font Manager: 테마 감지가 시작되었습니다.");
+    console.log("Font Manager: 테마 감지가 시작되었습니다. (MutationObserver 활성화)");
 }
 
 // 테마 확인 및 자동 프리셋 적용
 function checkAndApplyThemePreset() {
+    console.log("Font Manager: === 테마 검사 시작 ===");
+    
     const themeRules = settings?.themeRules || [];
-    if (themeRules.length === 0) return;
+    console.log(`Font Manager: 등록된 테마 규칙 수: ${themeRules.length}`);
+    
+    if (themeRules.length === 0) {
+        console.log("Font Manager: 등록된 테마 규칙이 없습니다. 검사 종료.");
+        return;
+    }
     
     // 현재 활성화된 CSS 파일들의 href 수집
     const activeStylesheetHrefs = [];
     const linkElements = document.querySelectorAll('link[rel="stylesheet"]');
     
-    linkElements.forEach(link => {
+    console.log(`Font Manager: 페이지에서 발견된 CSS 링크 수: ${linkElements.length}`);
+    
+    linkElements.forEach((link, index) => {
         if (link.href) {
             activeStylesheetHrefs.push(link.href);
+            console.log(`Font Manager: CSS 파일 ${index + 1}: ${link.href}`);
         }
     });
+    
+    console.log(`Font Manager: 총 활성 CSS 파일 수: ${activeStylesheetHrefs.length}`);
     
     // 테마 규칙 확인
     let matchedRule = null;
     
+    console.log("Font Manager: --- 테마 매칭 시도 시작 ---");
+    
     for (const rule of themeRules) {
-        if (!rule.themeName) continue;
+        if (!rule.themeName) {
+            console.log(`Font Manager: 규칙 ID ${rule.id} - 테마 이름이 비어있음, 건너뜀`);
+            continue;
+        }
+        
+        console.log(`Font Manager: 규칙 검사 - 테마명: "${rule.themeName}", 프리셋ID: ${rule.presetId}`);
         
         // CSS 파일명에 테마 이름이 포함되어 있는지 확인
-        const isMatched = activeStylesheetHrefs.some(href => 
-            href.includes(rule.themeName)
-        );
+        const matchingHrefs = activeStylesheetHrefs.filter(href => href.includes(rule.themeName));
         
-        if (isMatched) {
+        if (matchingHrefs.length > 0) {
             matchedRule = rule;
-            console.log(`Font Manager: 테마 매칭됨 - ${rule.themeName} -> 프리셋 적용`);
+            console.log(`Font Manager: ✅ 테마 매칭 성공!`);
+            console.log(`Font Manager: 매칭된 파일들:`, matchingHrefs);
+            console.log(`Font Manager: 적용할 프리셋: ${rule.presetId}`);
             break;
+        } else {
+            console.log(`Font Manager: ❌ "${rule.themeName}" 테마명이 포함된 CSS 파일 없음`);
         }
     }
     
+    console.log("Font Manager: --- 테마 매칭 시도 완료 ---");
+    
     if (matchedRule) {
+        console.log(`Font Manager: 매칭된 규칙으로 프리셋 적용 시작`);
         // 매칭된 프리셋 적용
         applyPresetById(matchedRule.presetId);
+    } else {
+        console.log("Font Manager: 매칭되는 테마가 없습니다.");
     }
+    
+    console.log("Font Manager: === 테마 검사 완료 ===");
 }
 
 // ID로 프리셋 적용
 function applyPresetById(presetId) {
+    console.log(`Font Manager: === 프리셋 적용 시작 (ID: ${presetId}) ===`);
+    
     const presets = settings?.presets || [];
+    console.log(`Font Manager: 사용 가능한 프리셋 수: ${presets.length}`);
+    
     const preset = presets.find(p => p.id === presetId);
     
     if (!preset) {
-        console.warn(`Font Manager: 프리셋을 찾을 수 없습니다 (ID: ${presetId})`);
+        console.warn(`Font Manager: ❌ 프리셋을 찾을 수 없습니다 (ID: ${presetId})`);
+        console.log("Font Manager: 사용 가능한 프리셋 목록:", presets.map(p => ({ id: p.id, name: p.name })));
         return;
     }
     
+    console.log(`Font Manager: ✅ 프리셋 발견: "${preset.name}"`);
+    console.log("Font Manager: 프리셋 내용:", {
+        uiFont: preset.uiFont,
+        messageFont: preset.messageFont,
+        uiFontSize: preset.uiFontSize,
+        uiFontWeight: preset.uiFontWeight,
+        chatFontSize: preset.chatFontSize,
+        inputFontSize: preset.inputFontSize,
+        chatFontWeight: preset.chatFontWeight,
+        chatLineHeight: preset.chatLineHeight
+    });
+    
     // 현재 프리셋 설정
+    const previousPreset = settings.currentPreset;
     settings.currentPreset = presetId;
+    console.log(`Font Manager: 현재 프리셋 변경: ${previousPreset} -> ${presetId}`);
     
     // 프리셋의 폰트들과 조절값들을 임시 변수에 설정
+    const previousValues = {
+        tempUiFont,
+        tempMessageFont,
+        tempUiFontSize,
+        tempUiFontWeight,
+        tempChatFontSize,
+        tempInputFontSize,
+        tempChatFontWeight,
+        tempChatLineHeight
+    };
+    
     tempUiFont = preset.uiFont || null;
     tempMessageFont = preset.messageFont || null;
     tempUiFontSize = preset.uiFontSize ?? settings.uiFontSize;
@@ -1410,6 +1489,19 @@ function applyPresetById(presetId) {
     tempChatFontWeight = preset.chatFontWeight ?? settings.chatFontWeight;
     tempChatLineHeight = preset.chatLineHeight ?? settings.chatLineHeight;
     
+    console.log("Font Manager: 임시 변수 업데이트 완료");
+    console.log("Font Manager: 이전 값들:", previousValues);
+    console.log("Font Manager: 새 값들:", {
+        tempUiFont,
+        tempMessageFont,
+        tempUiFontSize,
+        tempUiFontWeight,
+        tempChatFontSize,
+        tempInputFontSize,
+        tempChatFontWeight,
+        tempChatLineHeight
+    });
+    
     // 전역 설정에도 반영
     settings.uiFontSize = tempUiFontSize;
     settings.uiFontWeight = tempUiFontWeight;
@@ -1418,13 +1510,19 @@ function applyPresetById(presetId) {
     settings.chatFontWeight = tempChatFontWeight;
     settings.chatLineHeight = tempChatLineHeight;
     
+    console.log("Font Manager: 전역 설정 업데이트 완료");
+    
     // 폰트 적용
+    console.log("Font Manager: UI 폰트 업데이트 시작");
     updateUIFont();
+    console.log("Font Manager: UI 폰트 업데이트 완료");
     
     // 설정 저장
+    console.log("Font Manager: 설정 저장 시작");
     saveSettingsDebounced();
     
-    console.log(`Font Manager: 프리셋 '${preset.name}' 자동 적용됨`);
+    console.log(`Font Manager: ✅ 프리셋 '${preset.name}' 자동 적용 완료!`);
+    console.log("Font Manager: === 프리셋 적용 완료 ===");
 }
 
 // 슬래시 커맨드 등록
@@ -1468,12 +1566,25 @@ async function addToWandMenu() {
 
 // 확장 초기화
 jQuery(async () => {
+    console.log("Font Manager: 확장 초기화 시작...");
+    
     initSettings();
+    console.log("Font Manager: 설정 초기화 완료");
+    console.log("Font Manager: 현재 설정:", {
+        fonts: settings.fonts?.length || 0,
+        presets: settings.presets?.length || 0,
+        themeRules: settings.themeRules?.length || 0,
+        currentPreset: settings.currentPreset
+    });
+    
     await addToWandMenu();
+    console.log("Font Manager: 요술봉 메뉴 버튼 추가 완료");
+    
     updateAllFonts();
+    console.log("Font Manager: 폰트 업데이트 및 테마 감지 시작");
     
     // SillyTavern 로드 완료 후 슬래시 커맨드 등록
     setTimeout(registerSlashCommands, 2000);
     
-    console.log("Font-Manager 확장이 로드되었습니다.");
+    console.log("Font Manager: 확장 로드 완료!");
 }); 
