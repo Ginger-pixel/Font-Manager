@@ -36,22 +36,16 @@ function generateId() {
 
 // ArrayBuffer를 Base64로 변환 (스택 오버플로우 방지)
 function arrayBufferToBase64(buffer) {
-    try {
-        const bytes = new Uint8Array(buffer);
-        const chunkSize = 8192; // 8KB 청크로 더 안전하게 처리
-        let binaryString = '';
-        
-        for (let i = 0; i < bytes.length; i += chunkSize) {
-            const chunk = bytes.slice(i, i + chunkSize);
-            const chunkString = Array.from(chunk, byte => String.fromCharCode(byte)).join('');
-            binaryString += chunkString;
-        }
-        
-        return btoa(binaryString);
-    } catch (error) {
-        console.error('Base64 인코딩 실패:', error);
-        throw new Error('폰트 파일 인코딩에 실패했습니다.');
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 32768; // 32KB 청크로 처리
+    let binaryString = '';
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.slice(i, i + chunkSize);
+        binaryString += String.fromCharCode.apply(null, chunk);
     }
+    
+    return btoa(binaryString);
 }
 
 // 프리셋 이름 설정 팝업 표시
@@ -156,13 +150,22 @@ async function showFontNamePopup(fontData) {
         if (!extension_settings[extensionName].fonts) {
             extension_settings[extensionName].fonts = [];
         }
-        extension_settings[extensionName].fonts.push(newFont);
         
-        // 시스템에 즉시 적용
-        applyFontToSystem(newFont);
-        
-        saveSettingsDebounced();
-        success = true;
+        try {
+            // 시스템에 즉시 적용
+            await applyFontToSystem(newFont);
+            
+            // 성공시에만 목록에 추가
+            extension_settings[extensionName].fonts.push(newFont);
+            saveSettingsDebounced();
+            success = true;
+            
+        } catch (error) {
+            console.error('폰트 적용 실패:', error);
+            // 실패시 루프 계속 (다른 이름으로 다시 시도 가능)
+            alert(`폰트 적용에 실패했습니다: ${error.message}`);
+            continue;
+        }
     }
     
     return true;
@@ -263,8 +266,8 @@ function renderFontAddArea(template) {
         
         <div class="font-add-section">
             <h3>로컬 폰트 파일 불러오기</h3>
-            <input type="file" id="font-file-input" class="font-file-input" accept=".ttf,.otf,.woff,.woff2">
-            <button id="select-font-file-btn" class="select-font-file-btn">폰트 파일 선택 (TTF, OTF, WOFF, WOFF2)</button>
+            <input type="file" id="font-file-input" class="font-file-input" accept=".ttf">
+            <button id="select-font-file-btn" class="select-font-file-btn">폰트 선택 (TTF 파일만)</button>
         </div>
     `;
     
@@ -332,59 +335,98 @@ async function applyTempUIFont(fontName) {
     
     if (!fontName) {
         tempUiFont = null;
+        console.log('UI 폰트 초기화됨');
         return;
     }
     
-    // 폰트 로딩 체크 (브라우저 지원 여부 확인)
+    // 폰트가 실제 로드되었는지 더 확실하게 체크
+    let fontLoaded = false;
+    
+    // 1. 소스코드 폰트인 경우 DOM에서 스타일 확인
+    const fonts = extension_settings[extensionName]?.fonts || [];
+    const targetFont = fonts.find(f => f.name === fontName);
+    
+    if (targetFont && targetFont.type === 'source') {
+        const fontStyle = document.getElementById(`custom-font-${targetFont.id}`);
+        if (fontStyle) {
+            console.log(`소스코드 폰트 '${fontName}' 스타일 확인됨`);
+            fontLoaded = true;
+        }
+    }
+    
+    // 2. 브라우저 폰트 API로 체크
     if (document.fonts && document.fonts.check) {
         try {
-            // 폰트가 로드될 때까지 기다리기
             await document.fonts.load(`16px "${fontName}"`);
-            
-            // 폰트가 사용 가능한지 확인
             const isLoaded = document.fonts.check(`16px "${fontName}"`);
-            if (!isLoaded) {
-                console.warn(`폰트 '${fontName}'가 로드되지 않았지만 적용을 시도합니다.`);
+            if (isLoaded) {
+                console.log(`브라우저 API로 폰트 '${fontName}' 로드 확인됨`);
+                fontLoaded = true;
             }
         } catch (error) {
             console.warn(`폰트 '${fontName}' 로딩 체크 실패:`, error);
         }
     }
     
+    // 3. 시간을 두고 다시 체크
+    if (!fontLoaded) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (document.fonts && document.fonts.check) {
+            try {
+                const isLoaded = document.fonts.check(`16px "${fontName}"`);
+                if (isLoaded) {
+                    console.log(`지연 체크로 폰트 '${fontName}' 로드 확인됨`);
+                    fontLoaded = true;
+                }
+            } catch (error) {
+                console.warn(`폰트 '${fontName}' 지연 체크 실패:`, error);
+            }
+        }
+    }
+    
     const cssRules = `
-        html body,
-        html body *,
-        html body input,
-        html body select,
-        html body span,
-        html body code,
-        html body .list-group-item,
-        html body .ui-widget-content .ui-menu-item-wrapper,
-        html body textarea:not(#send_textarea),
-        html body div,
-        html body p,
-        html body label,
-        html body button {
+        body,
+        input,
+        select,
+        span,
+        code,
+        .list-group-item,
+        .ui-widget-content .ui-menu-item-wrapper,
+        textarea:not(#send_textarea) {
             font-family: '${fontName}', var(--ui-default-font), Sans-Serif !important;
             font-weight: normal !important;
             line-height: 1.1rem !important;
             -webkit-text-stroke: var(--ui-font-weight) !important;
         }
-        html body *::before,
-        html body i:not(.fa-solid):not(.fa-brands):not(.fa-regular) {
+        *::before,
+        i:not(.fa-solid):not(.fa-brands):not(.fa-light):not(.fa-regular):not(.fa-thin) {
             font-family: '${fontName}', Sans-Serif !important;
             filter: none !important;
             text-shadow: none !important;
         }
-        html body .drawer-content,
-        html body textarea,
-        html body .drawer-icon {
+        .drawer-content,
+        textarea,
+        .drawer-icon {
             border: 0 !important;
             color: var(--default-font-color) !important;
         }
-        html body .interactable,
-        html body .fa-solid {
+        .interactable,
+        .fa-solid {
             transition: all 0.3s !important;
+        }
+        
+        /* 강제 적용을 위한 더 구체적인 선택자 */
+        html body,
+        html body * {
+            font-family: '${fontName}', var(--ui-default-font), Sans-Serif !important;
+        }
+        
+        /* 아이콘 폰트는 제외 */
+        .fa, .fas, .far, .fal, .fab, .fad,
+        .fa-solid, .fa-regular, .fa-light, .fa-brands, .fa-thin,
+        [class*="fa-"]:before,
+        i.fa, i.fas, i.far, i.fal, i.fab, i.fad {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "Font Awesome 6 Pro" !important;
         }
     `;
     
@@ -394,7 +436,7 @@ async function applyTempUIFont(fontName) {
     document.head.appendChild(style);
     
     tempUiFont = fontName;
-    console.log(`임시 UI 폰트 '${fontName}' 적용됨`);
+    console.log(`임시 UI 폰트 '${fontName}' 적용됨 (로드 상태: ${fontLoaded ? '확인됨' : '불확실'})`);
 }
 
 // 이벤트 리스너 설정
@@ -523,24 +565,26 @@ function setupEventListeners(template) {
         const file = event.target.files[0];
         if (!file) return;
         
-        const validExtensions = ['.ttf', '.otf', '.woff', '.woff2'];
-        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-        
-        if (!validExtensions.includes(fileExtension)) {
-            alert('지원되는 폰트 파일 형식: TTF, OTF, WOFF, WOFF2');
+        if (!file.name.toLowerCase().endsWith('.ttf')) {
+            alert('TTF 파일만 선택할 수 있습니다.');
             return;
         }
         
         // 파일 크기 체크 (10MB 제한)
-        if (file.size > 10 * 1024 * 1024) {
-            alert('폰트 파일 크기가 너무 큽니다. (최대 10MB)');
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxSize) {
+            alert('폰트 파일이 너무 큽니다. 10MB 이하의 파일을 선택해주세요.');
             return;
         }
         
         try {
+            console.log(`폰트 파일 로딩 중: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+            
             const arrayBuffer = await file.arrayBuffer();
             // 큰 파일의 스택 오버플로우 방지를 위한 청크 방식 base64 변환
             const base64 = arrayBufferToBase64(arrayBuffer);
+            
+            console.log(`폰트 파일 변환 완료: ${base64.length} 문자`);
             
             const success = await showFontNamePopup({
                 type: 'file',
@@ -556,7 +600,7 @@ function setupEventListeners(template) {
             }
         } catch (error) {
             console.error('폰트 파일 로드 오류:', error);
-            alert('폰트 파일을 읽는 중 오류가 발생했습니다.');
+            alert(`폰트 파일을 읽는 중 오류가 발생했습니다: ${error.message}`);
         }
     });
     
@@ -641,13 +685,18 @@ function deleteFont(template, fontId) {
 }
 
 // 폰트를 시스템에 적용
-function applyFontToSystem(font) {
+async function applyFontToSystem(font) {
     try {
         if (font.type === 'source') {
             // 기존 스타일 제거
             const existingStyle = document.getElementById(`custom-font-${font.id}`);
             if (existingStyle) {
                 existingStyle.remove();
+            }
+            
+            // CSS 소스코드 검증
+            if (!font.data || !font.data.trim()) {
+                throw new Error('폰트 소스코드가 비어있습니다.');
             }
             
             // CSS 소스코드에서 폰트 적용
@@ -657,58 +706,61 @@ function applyFontToSystem(font) {
             document.head.appendChild(style);
             
             // 폰트가 로드될 때까지 기다리기
-            setTimeout(() => {
-                console.log(`소스코드 폰트 '${font.name}'이 적용되었습니다.`);
-            }, 100);
+            await new Promise(resolve => setTimeout(resolve, 200));
+            console.log(`소스코드 폰트 '${font.name}'이 적용되었습니다.`);
             
         } else if (font.type === 'file') {
-            // TTF 파일에서 폰트 적용 - 더 안전한 방식
-            const formats = [
-                { mime: 'font/truetype', format: 'truetype' },
-                { mime: 'font/opentype', format: 'opentype' },
-                { mime: 'font/woff2', format: 'woff2' },
-                { mime: 'font/woff', format: 'woff' }
-            ];
+            // Base64 데이터 검증
+            if (!font.data || font.data.length < 100) {
+                throw new Error('폰트 파일 데이터가 유효하지 않습니다.');
+            }
             
-            let formatIndex = 0;
+            // TTF 파일에서 폰트 적용
+            const fontData = `data:font/truetype;base64,${font.data}`;
+            console.log(`폰트 '${font.name}' 로딩 시작... (데이터 크기: ${font.data.length} 문자)`);
             
-            const tryNextFormat = () => {
-                if (formatIndex >= formats.length) {
-                    console.error(`폰트 '${font.name}' 로드 실패: 지원되는 폰트 포맷을 찾을 수 없습니다.`);
-                    alert(`폰트 '${font.name}' 로드에 실패했습니다.\n파일이 유효한 폰트 파일인지 확인해주세요.`);
-                    return;
+            try {
+                const fontFace = new FontFace(font.name, `url(${fontData})`);
+                
+                // 타임아웃 설정 (10초)
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('폰트 로딩 타임아웃 (10초)')), 10000);
+                });
+                
+                await Promise.race([fontFace.load(), timeoutPromise]);
+                document.fonts.add(fontFace);
+                console.log(`TTF 폰트 '${font.name}'이 성공적으로 로드되었습니다.`);
+                
+            } catch (fontError) {
+                console.error(`폰트 '${font.name}' 로드 실패:`, fontError);
+                
+                // 사용자 친화적인 오류 메시지
+                let errorMessage = '폰트 로드에 실패했습니다.';
+                if (fontError.message.includes('network')) {
+                    errorMessage = '폰트 파일이 손상되었거나 형식이 올바르지 않습니다.';
+                } else if (fontError.message.includes('timeout')) {
+                    errorMessage = '폰트 파일이 너무 커서 로딩 시간이 초과되었습니다.';
+                } else if (fontError.message.includes('decode')) {
+                    errorMessage = '폰트 파일 형식을 인식할 수 없습니다. 유효한 TTF 파일인지 확인해주세요.';
                 }
                 
-                const formatInfo = formats[formatIndex];
-                const fontData = `data:${formatInfo.mime};base64,${font.data}`;
+                alert(`폰트 '${font.name}' 로드 실패: ${errorMessage}`);
                 
-                try {
-                    const fontFace = new FontFace(font.name, `url(${fontData})`, {
-                        style: 'normal',
-                        weight: 'normal'
-                    });
-                    
-                    fontFace.load().then(() => {
-                        document.fonts.add(fontFace);
-                        console.log(`${formatInfo.format} 폰트 '${font.name}'이 로드되었습니다.`);
-                    }).catch(formatError => {
-                        console.warn(`${formatInfo.format} 포맷으로 로드 실패:`, formatError.message);
-                        formatIndex++;
-                        tryNextFormat();
-                    });
-                } catch (error) {
-                    console.warn(`포맷 ${formatInfo.format} 시도 중 오류:`, error);
-                    formatIndex++;
-                    tryNextFormat();
+                // 실패한 폰트는 목록에서 제거
+                const fonts = extension_settings[extensionName]?.fonts || [];
+                const index = fonts.findIndex(f => f.id === font.id);
+                if (index !== -1) {
+                    fonts.splice(index, 1);
+                    saveSettingsDebounced();
                 }
-            };
-            
-            tryNextFormat();
+                
+                throw fontError;
+            }
         }
         
     } catch (error) {
         console.error(`폰트 '${font.name}' 적용 실패:`, error);
-        alert(`폰트 적용 중 오류가 발생했습니다: ${error.message}`);
+        throw error;
     }
 }
 
@@ -722,38 +774,33 @@ function applyPresetUIFont(preset) {
     }
     
     const cssRules = `
-        html body,
-        html body *,
-        html body input,
-        html body select,
-        html body span,
-        html body code,
-        html body .list-group-item,
-        html body .ui-widget-content .ui-menu-item-wrapper,
-        html body textarea:not(#send_textarea),
-        html body div,
-        html body p,
-        html body label,
-        html body button {
+        body,
+        input,
+        select,
+        span,
+        code,
+        .list-group-item,
+        .ui-widget-content .ui-menu-item-wrapper,
+        textarea:not(#send_textarea) {
             font-family: '${preset.uiFont}', var(--ui-default-font), Sans-Serif !important;
             font-weight: normal !important;
-            line-height: 1.1rem !important;
-            -webkit-text-stroke: var(--ui-font-weight) !important;
+            line-height: 1.1rem;
+            -webkit-text-stroke: var(--ui-font-weight);
         }
-        html body *::before,
-        html body i:not(.fa-solid):not(.fa-brands):not(.fa-regular) {
-            font-family: '${preset.uiFont}', Sans-Serif !important;
+        *::before,
+        i {
+            font-family: '${preset.uiFont}', Sans-Serif, "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
             filter: none !important;
             text-shadow: none !important;
         }
-        html body .drawer-content,
-        html body textarea,
-        html body .drawer-icon {
-            border: 0 !important;
+        .drawer-content,
+        textarea,
+        .drawer-icon {
+            border: 0;
             color: var(--default-font-color) !important;
         }
-        html body .interactable,
-        html body .fa-solid {
+        .interactable,
+        .fa-solid {
             transition: all 0.3s !important;
         }
     `;
@@ -789,13 +836,23 @@ function removeFontFromSystem(font) {
 }
 
 // 모든 폰트 업데이트 (초기 로드용)
-function updateAllFonts() {
+async function updateAllFonts() {
     const fonts = extension_settings[extensionName]?.fonts || [];
     
-    // 각 폰트를 시스템에 적용
-    fonts.forEach(font => {
-        applyFontToSystem(font);
-    });
+    // 각 폰트를 시스템에 적용 (순차적으로 처리)
+    for (const font of fonts) {
+        try {
+            await applyFontToSystem(font);
+        } catch (error) {
+            console.error(`초기 로드 중 폰트 '${font.name}' 적용 실패:`, error);
+            // 실패한 폰트는 목록에서 제거
+            const index = fonts.findIndex(f => f.id === font.id);
+            if (index !== -1) {
+                fonts.splice(index, 1);
+                saveSettingsDebounced();
+            }
+        }
+    }
     
     // 현재 프리셋의 UI 폰트 적용
     const currentPreset = extension_settings[extensionName]?.currentPreset;
@@ -851,7 +908,7 @@ async function addToWandMenu() {
 jQuery(async () => {
     await loadSettings();
     await addToWandMenu();
-    updateAllFonts();
+    await updateAllFonts();
     
     // SillyTavern 로드 완료 후 슬래시 커맨드 등록
     setTimeout(registerSlashCommands, 2000);
