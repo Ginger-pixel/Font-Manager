@@ -235,6 +235,7 @@ async function openFontManagementPopup() {
     
     // 모든 영역 렌더링
     renderPresetDropdown(template);
+    renderToggleSection(template);
     renderUIFontSection(template);
     renderMessageFontSection(template);
     renderThemeLinkingSection(template);
@@ -297,6 +298,12 @@ function renderPresetDropdown(template) {
             dropdown.append(`<option value="${preset.id}" ${isSelected ? 'selected' : ''}>${preset.name}</option>`);
         });
     }
+}
+
+// 폰트 매니저 활성화 토글 렌더링
+function renderToggleSection(template) {
+    const toggle = template.find('#font-manager-enabled-toggle');
+    toggle.prop('checked', settings.enabled);
 }
 
 // UI 폰트 섹션 렌더링
@@ -610,6 +617,12 @@ function updateUIFont() {
         document.head.appendChild(fontStyle);
     }
     
+    // 폰트 매니저가 비활성화되어 있으면 스타일을 비움
+    if (!settings.enabled) {
+        fontStyle.innerHTML = '';
+        return;
+    }
+    
     const fontCss = [];
     const uiFontCss = [];
     const cssVariables = [];
@@ -885,6 +898,13 @@ function applyTempChatLineHeight(height) {
 
 // 이벤트 리스너 설정
 function setupEventListeners(template) {
+    // 폰트 매니저 활성화 토글 이벤트
+    template.find('#font-manager-enabled-toggle').off('change').on('change', function() {
+        settings.enabled = $(this).prop('checked');
+        saveSettingsDebounced();
+        updateUIFont(); // 토글 상태 변경 시 스타일 업데이트
+    });
+    
     // 프리셋 드롭다운 변경 이벤트
     template.find('#preset-dropdown').off('change').on('change', function() {
         const presetId = $(this).val();
