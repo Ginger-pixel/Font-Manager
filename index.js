@@ -72,20 +72,15 @@ function isValidHexColor(color) {
     return /^[0-9A-Fa-f]{6}$/.test(color);
 }
 
-// 색상 미리보기 업데이트
-function updateColorPreview(inputElement, previewElement) {
+// 색상 유효성 검증 및 스타일 적용
+function validateColorInput(inputElement) {
     const color = inputElement.val().trim();
     if (isValidHexColor(color)) {
-        if (color) {
-            previewElement.css('background-color', '#' + color);
-            inputElement.removeClass('invalid');
-        } else {
-            previewElement.css('background-color', 'transparent');
-            inputElement.removeClass('invalid');
-        }
+        inputElement.removeClass('invalid');
+        return true;
     } else {
-        previewElement.css('background-color', '#ff0000'); // 오류 시 빨간색
         inputElement.addClass('invalid');
+        return false;
     }
 }
 
@@ -93,7 +88,6 @@ function updateColorPreview(inputElement, previewElement) {
 function syncColorInputs(template, hexColor, updatePicker = true, updateText = true) {
     const colorPicker = template.find('#ui-font-color-picker');
     const colorInput = template.find('#ui-font-color-input');
-    const colorPreview = template.find('#ui-font-color-preview');
     
     if (updatePicker) {
         if (hexColor) {
@@ -107,7 +101,7 @@ function syncColorInputs(template, hexColor, updatePicker = true, updateText = t
         colorInput.val(hexColor || '');
     }
     
-    updateColorPreview(colorInput, colorPreview);
+    validateColorInput(colorInput);
 }
 
 // 프리셋 이름 설정 팝업 표시
@@ -1079,7 +1073,7 @@ function setupEventListeners(template) {
     // UI 폰트 색상 텍스트 입력 이벤트
     template.find('#ui-font-color-input').off('input').on('input', function() {
         const color = $(this).val().trim();
-        updateColorPreview($(this), template.find('#ui-font-color-preview'));
+        validateColorInput($(this));
         if (isValidHexColor(color)) {
             if (color) {
                 template.find('#ui-font-color-picker').val('#' + color);

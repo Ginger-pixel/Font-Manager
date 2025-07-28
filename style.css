@@ -228,7 +228,6 @@
 }
 
 .color-input {
-    flex: 1;
     padding: 6px 8px;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 3px;
@@ -237,7 +236,7 @@
     font-family: 'Courier New', monospace;
     font-size: calc(var(--mainFontSize) * 0.85);
     text-transform: uppercase;
-    max-width: 80px;
+    width: 70px;
     transition: all 0.2s ease;
 }
 
@@ -252,26 +251,7 @@
     background-color: rgba(255, 68, 68, 0.1);
 }
 
-.color-preview {
-    width: 30px;
-    height: 26px;
-    border: 2px solid var(--SmartThemeBorderColor);
-    border-radius: 3px;
-    background-color: transparent;
-    transition: all 0.2s ease;
-    position: relative;
-}
 
-.color-preview:empty:before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(45deg);
-    width: 20px;
-    height: 2px;
-    background-color: var(--SmartThemeBorderColor);
-}
 
 /* 폰트 추가 영역 */
 .font-add-area {
@@ -543,13 +523,8 @@
     }
     
     .color-input {
-        max-width: 70px;
+        width: 60px;
         font-size: calc(var(--mainFontSize) * 0.8);
-    }
-    
-    .color-preview {
-        width: 25px;
-        height: 22px;
     }
 }
 
@@ -593,13 +568,8 @@
     }
     
     .color-input {
-        max-width: 60px;
+        width: 50px;
         font-size: calc(var(--mainFontSize) * 0.75);
         padding: 4px 6px;
-    }
-    
-    .color-preview {
-        width: 20px;
-        height: 20px;
     }
 } 
