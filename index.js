@@ -811,30 +811,49 @@ html body textarea:not(#send_textarea) {
         // 다국어 폰트 모드
         const currentLanguageFonts = tempLanguageFonts ?? settings.languageFonts;
         const languageFontCss = [];
+        const languageFallbacks = [];
         
-        // 언어별 폰트 CSS 생성 (메모리 효율적)
-        const fontFamilyList = [];
+        // 언어별 유니코드 범위 정의
+        const UNICODE_RANGES = {
+            english: ['U+0000-007F', 'U+0080-00FF', 'U+0100-017F', 'U+1E00-1EFF'], // Latin Basic, Extended, etc.
+            korean: ['U+AC00-D7AF', 'U+1100-11FF', 'U+3130-318F', 'U+A960-A97F'], // Hangul
+            japanese: ['U+3040-309F', 'U+30A0-30FF', 'U+31F0-31FF', 'U+FF65-FF9F'], // Hiragana, Katakana
+            chinese: ['U+4E00-9FFF', 'U+3400-4DBF', 'U+2F00-2FDF', 'U+F900-FAFF'] // CJK Ideographs
+        };
+        
+        // 각 언어별 @font-face 생성
         Object.entries(currentLanguageFonts).forEach(([lang, fontName]) => {
-            if (fontName) {
+            if (fontName && UNICODE_RANGES[lang]) {
                 const selectedFont = fonts.find(font => font.name === fontName);
                 const actualFontFamily = (selectedFont && selectedFont.fontFamily) ? selectedFont.fontFamily : fontName;
-                fontFamilyList.push(`"${actualFontFamily}"`);
+                const unicodeRange = UNICODE_RANGES[lang].join(', ');
+                
+                languageFontCss.push(`
+@font-face {
+  font-family: "font-manager-multilang";
+  src: local("${actualFontFamily}");
+  unicode-range: ${unicodeRange};
+}`);
+                languageFallbacks.push(`"${actualFontFamily}"`);
             }
         });
         
         // 다국어 폰트 적용 CSS
-        if (fontFamilyList.length > 0) {
+        if (languageFontCss.length > 0) {
             uiFontCss.push(`
+/* MULTI-LANGUAGE FONT DEFINITIONS */
+${languageFontCss.join('')}
+
 /* MULTI-LANGUAGE MESSAGE FONT APPLICATION */
 .mes *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([class*="fa-"]):not(i[class*="fa"]) {
-  font-family: ${fontFamilyList.join(', ')}, sans-serif !important;
+  font-family: "font-manager-multilang", ${languageFallbacks.join(', ')}, sans-serif !important;
   font-size: var(--font-manager-chat-size) !important;
   line-height: var(--font-manager-chat-line-height) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
 
 #send_form textarea {
-  font-family: ${fontFamilyList.join(', ')}, sans-serif !important;
+  font-family: "font-manager-multilang", ${languageFallbacks.join(', ')}, sans-serif !important;
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
