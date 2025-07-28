@@ -13,7 +13,7 @@ const defaultSettings = {
     fonts: [],
     presets: [],
     currentPreset: null,
-    enabled: true, // 폰트 매니저 활성화 상태
+    enabled: false, // 폰트 매니저 활성화 상태 - 디폴트로 비활성화
     // UI 폰트 조절 값들
     uiFontSize: 14,
     uiFontWeight: 0,
@@ -52,7 +52,7 @@ function initSettings() {
     settings.fonts = settings.fonts ?? [];
     settings.presets = settings.presets ?? [];
     settings.currentPreset = settings.currentPreset ?? null;
-    settings.enabled = settings.enabled ?? true;
+    settings.enabled = settings.enabled ?? false;
     settings.themeRules = settings.themeRules ?? [];
     // 조절값 기본값 보장
     settings.uiFontSize = settings.uiFontSize ?? 14;
@@ -304,6 +304,43 @@ function renderPresetDropdown(template) {
 function renderToggleSection(template) {
     const toggle = template.find('#font-manager-enabled-toggle');
     toggle.prop('checked', settings.enabled);
+    
+    // enabled 상태에 따라 다른 섹션들 활성화/비활성화
+    updateSectionsState(template, settings.enabled);
+}
+
+// 섹션들의 활성화 상태 업데이트
+function updateSectionsState(template, enabled) {
+    const sections = [
+        '#ui-font-section',
+        '#message-font-section', 
+        '#theme-linking-section',
+        '#font-add-area',
+        '#font-list-area'
+    ];
+    
+    // 프리셋 관련 요소들
+    const presetElements = template.find('.preset-selector-row');
+    
+    sections.forEach(sectionId => {
+        const section = template.find(sectionId);
+        if (enabled) {
+            section.removeClass('disabled-section');
+            section.find('input, select, button, textarea').prop('disabled', false);
+        } else {
+            section.addClass('disabled-section');
+            section.find('input, select, button, textarea').prop('disabled', true);
+        }
+    });
+    
+    // 프리셋 요소들도 같이 비활성화/활성화
+    if (enabled) {
+        presetElements.removeClass('disabled-section');
+        presetElements.find('select, button').prop('disabled', false);
+    } else {
+        presetElements.addClass('disabled-section');
+        presetElements.find('select, button').prop('disabled', true);
+    }
 }
 
 // UI 폰트 섹션 렌더링
@@ -903,6 +940,7 @@ function setupEventListeners(template) {
         settings.enabled = $(this).prop('checked');
         saveSettingsDebounced();
         updateUIFont(); // 토글 상태 변경 시 스타일 업데이트
+        updateSectionsState(template, settings.enabled); // 섹션들 활성화/비활성화
     });
     
     // 프리셋 드롭다운 변경 이벤트

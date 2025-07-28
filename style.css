@@ -84,6 +84,7 @@
 .font-manager-toggle-row {
     display: flex;
     align-items: center;
+    justify-content: center;
     margin-bottom: 10px;
 }
 
@@ -104,6 +105,18 @@
 
 .font-manager-toggle-label span {
     color: var(--SmartThemeBodyColor);
+}
+
+/* 비활성화된 섹션 스타일 */
+.disabled-section {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(0.5);
+    transition: all 0.3s ease;
+}
+
+.disabled-section * {
+    cursor: not-allowed !important;
 }
 
 /* UI 폰트 섹션 */
