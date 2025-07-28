@@ -1033,6 +1033,7 @@ function setupEventListeners(template) {
             currentPreset.name = newName;
             saveSettingsDebounced();
             renderPresetDropdown(template);
+            renderThemeLinkingSection(template);
             setupEventListeners(template);
         }
     });
@@ -1052,7 +1053,13 @@ function setupEventListeners(template) {
                 id: generateId(),
                 name: presetName,
                 uiFont: null,
-                messageFont: null
+                messageFont: null,
+                uiFontSize: 14,
+                uiFontWeight: 0,
+                chatFontSize: 14,
+                inputFontSize: 14,
+                chatFontWeight: 0,
+                chatLineHeight: 1.2
             };
             
                          // 프리셋 추가
@@ -1063,6 +1070,7 @@ function setupEventListeners(template) {
             renderPresetDropdown(template);
             renderUIFontSection(template);
             renderMessageFontSection(template);
+            renderThemeLinkingSection(template);
             setupEventListeners(template);
         }
     });
@@ -1307,6 +1315,28 @@ function saveCurrentSettingsToGlobal() {
     }
     if (tempChatLineHeight !== null) {
         settings.chatLineHeight = tempChatLineHeight;
+    }
+    
+    // 현재 선택된 프리셋에도 폰트 설정 저장
+    if (selectedPresetId) {
+        const presets = settings?.presets || [];
+        const currentPreset = presets.find(p => p.id === selectedPresetId);
+        if (currentPreset) {
+            // 폰트 설정 저장 (명시적 기본 폰트 선택 시 null로 저장)
+            currentPreset.uiFont = isUIFontExplicitlyDefault ? null : tempUiFont;
+            currentPreset.messageFont = isMessageFontExplicitlyDefault ? null : tempMessageFont;
+            
+            // 조절값들도 저장
+            currentPreset.uiFontSize = tempUiFontSize ?? settings.uiFontSize;
+            currentPreset.uiFontWeight = tempUiFontWeight ?? settings.uiFontWeight;
+            currentPreset.chatFontSize = tempChatFontSize ?? settings.chatFontSize;
+            currentPreset.inputFontSize = tempInputFontSize ?? settings.inputFontSize;
+            currentPreset.chatFontWeight = tempChatFontWeight ?? settings.chatFontWeight;
+            currentPreset.chatLineHeight = tempChatLineHeight ?? settings.chatLineHeight;
+            
+            // 현재 프리셋으로 설정
+            settings.currentPreset = selectedPresetId;
+        }
     }
     
     // 설정 저장
