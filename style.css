@@ -78,6 +78,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-bottom: 15px;
 }
 
 .ui-font-dropdown,
@@ -98,6 +99,92 @@
     outline: none;
     border-color: var(--SmartThemeQuoteColor);
     box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
+}
+
+/* 폰트 조절바 컨테이너 */
+.font-controls {
+    margin-top: 15px;
+}
+
+.font-control-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 15px;
+}
+
+.font-control-row:last-child {
+    margin-bottom: 0;
+}
+
+.font-control-row label {
+    min-width: 70px;
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 0.9);
+    font-weight: 500;
+}
+
+/* 조절바 스타일 */
+.font-control-row input[type="range"] {
+    flex: 1;
+    height: 6px;
+    background: var(--black50a);
+    border-radius: 3px;
+    outline: none;
+    border: 1px solid var(--SmartThemeBorderColor);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.font-control-row input[type="range"]:hover {
+    border-color: var(--SmartThemeQuoteColor);
+}
+
+.font-control-row input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--SmartThemeQuoteColor);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--SmartThemeBodyColor);
+    transition: all 0.2s ease;
+}
+
+.font-control-row input[type="range"]::-webkit-slider-thumb:hover {
+    background: var(--SmartThemeBodyColor);
+    border-color: var(--SmartThemeQuoteColor);
+    transform: scale(1.1);
+}
+
+.font-control-row input[type="range"]::-moz-range-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--SmartThemeQuoteColor);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--SmartThemeBodyColor);
+    transition: all 0.2s ease;
+}
+
+.font-control-row input[type="range"]::-moz-range-thumb:hover {
+    background: var(--SmartThemeBodyColor);
+    border-color: var(--SmartThemeQuoteColor);
+    transform: scale(1.1);
+}
+
+/* 값 표시 */
+.font-control-row span {
+    min-width: 60px;
+    text-align: right;
+    color: var(--SmartThemeQuoteColor);
+    font-size: calc(var(--mainFontSize) * 0.85);
+    font-weight: 600;
+    background-color: var(--black50a);
+    padding: 4px 8px;
+    border-radius: 3px;
+    border: 1px solid var(--SmartThemeBorderColor);
 }
 
 /* 폰트 추가 영역 */
@@ -349,6 +436,20 @@
         flex-direction: column;
         align-items: stretch;
     }
+    
+    .font-control-row {
+        gap: 10px;
+    }
+    
+    .font-control-row label {
+        min-width: 60px;
+        font-size: calc(var(--mainFontSize) * 0.85);
+    }
+    
+    .font-control-row span {
+        min-width: 50px;
+        font-size: calc(var(--mainFontSize) * 0.8);
+    }
 }
 
 @media (max-width: 480px) {
@@ -359,5 +460,25 @@
     
     .font-source-textarea {
         min-height: 80px;
+    }
+    
+    .font-control-row {
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    
+    .font-control-row label {
+        min-width: 50px;
+        flex-basis: 100%;
+        margin-bottom: 5px;
+    }
+    
+    .font-control-row input[type="range"] {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .font-control-row span {
+        min-width: 45px;
     }
 } 

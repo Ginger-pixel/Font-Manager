@@ -12,7 +12,15 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const defaultSettings = {
     fonts: [],
     presets: [],
-    currentPreset: null
+    currentPreset: null,
+    // UI 폰트 조절 값들
+    uiFontSize: 14,
+    uiFontWeight: 0,
+    // 채팅 폰트 조절 값들
+    chatFontSize: 14,
+    inputFontSize: 14,
+    chatFontWeight: 0,
+    chatLineHeight: 1.2
 };
 
 // 현재 선택된 프리셋 ID와 임시 폰트들
@@ -22,6 +30,13 @@ let tempMessageFont = null;
 let originalUIStyles = null;
 let fontStyle = null;
 let settings = null;
+// 임시 조절값들
+let tempUiFontSize = null;
+let tempUiFontWeight = null;
+let tempChatFontSize = null;
+let tempInputFontSize = null;
+let tempChatFontWeight = null;
+let tempChatLineHeight = null;
 
 // 설정 초기화
 function initSettings() {
@@ -34,6 +49,13 @@ function initSettings() {
     settings.fonts = settings.fonts ?? [];
     settings.presets = settings.presets ?? [];
     settings.currentPreset = settings.currentPreset ?? null;
+    // 조절값 기본값 보장
+    settings.uiFontSize = settings.uiFontSize ?? 14;
+    settings.uiFontWeight = settings.uiFontWeight ?? 0;
+    settings.chatFontSize = settings.chatFontSize ?? 14;
+    settings.inputFontSize = settings.inputFontSize ?? 14;
+    settings.chatFontWeight = settings.chatFontWeight ?? 0;
+    settings.chatLineHeight = settings.chatLineHeight ?? 1.2;
 }
 
 // 고유 ID 생성
@@ -169,7 +191,7 @@ async function openFontManagementPopup() {
     // 원본 UI 스타일 저장
     saveOriginalUIStyles();
     
-    // 현재 프리셋의 폰트 미리 적용
+    // 현재 프리셋의 폰트와 조절값들 미리 적용
     if (selectedPresetId) {
         const currentPreset = presets.find(p => p.id === selectedPresetId);
         if (currentPreset && currentPreset.uiFont) {
@@ -178,6 +200,14 @@ async function openFontManagementPopup() {
         if (currentPreset && currentPreset.messageFont) {
             applyTempMessageFont(currentPreset.messageFont);
         }
+        
+        // 조절값들도 미리 적용
+        tempUiFontSize = currentPreset?.uiFontSize ?? settings.uiFontSize;
+        tempUiFontWeight = currentPreset?.uiFontWeight ?? settings.uiFontWeight;
+        tempChatFontSize = currentPreset?.chatFontSize ?? settings.chatFontSize;
+        tempInputFontSize = currentPreset?.inputFontSize ?? settings.inputFontSize;
+        tempChatFontWeight = currentPreset?.chatFontWeight ?? settings.chatFontWeight;
+        tempChatLineHeight = currentPreset?.chatLineHeight ?? settings.chatLineHeight;
     }
     
     // 모든 영역 렌더링
@@ -206,10 +236,22 @@ async function openFontManagementPopup() {
         restoreOriginalUIStyles();
         tempUiFont = null;
         tempMessageFont = null;
+        tempUiFontSize = null;
+        tempUiFontWeight = null;
+        tempChatFontSize = null;
+        tempInputFontSize = null;
+        tempChatFontWeight = null;
+        tempChatLineHeight = null;
     }
     
     // 임시 변수 초기화
     tempUiFont = null;
+    tempUiFontSize = null;
+    tempUiFontWeight = null;
+    tempChatFontSize = null;
+    tempInputFontSize = null;
+    tempChatFontWeight = null;
+    tempChatLineHeight = null;
 }
 
 // 프리셋 드롭다운 렌더링
@@ -257,6 +299,32 @@ function renderUIFontSection(template) {
         } else {
             dropdown.val("");  // 기본 폰트
         }
+        
+        // 조절바 값들 설정
+        const uiFontSize = tempUiFontSize ?? currentPreset?.uiFontSize ?? settings.uiFontSize;
+        const uiFontWeight = tempUiFontWeight ?? currentPreset?.uiFontWeight ?? settings.uiFontWeight;
+        
+        template.find('#ui-font-size-slider').val(uiFontSize);
+        template.find('#ui-font-size-value').text(uiFontSize + 'px');
+        template.find('#ui-font-weight-slider').val(uiFontWeight);
+        template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1));
+        
+        // 임시 값 설정
+        if (tempUiFontSize === null) {
+            tempUiFontSize = uiFontSize;
+        }
+        if (tempUiFontWeight === null) {
+            tempUiFontWeight = uiFontWeight;
+        }
+    } else {
+        // 프리셋이 없을 때 기본값 설정
+        const uiFontSize = tempUiFontSize ?? settings.uiFontSize;
+        const uiFontWeight = tempUiFontWeight ?? settings.uiFontWeight;
+        
+        template.find('#ui-font-size-slider').val(uiFontSize);
+        template.find('#ui-font-size-value').text(uiFontSize + 'px');
+        template.find('#ui-font-weight-slider').val(uiFontWeight);
+        template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1));
     }
 }
 
@@ -286,6 +354,50 @@ function renderMessageFontSection(template) {
         } else {
             dropdown.val("");  // 기본 폰트
         }
+        
+        // 조절바 값들 설정
+        const chatFontSize = tempChatFontSize ?? currentPreset?.chatFontSize ?? settings.chatFontSize;
+        const inputFontSize = tempInputFontSize ?? currentPreset?.inputFontSize ?? settings.inputFontSize;
+        const chatFontWeight = tempChatFontWeight ?? currentPreset?.chatFontWeight ?? settings.chatFontWeight;
+        const chatLineHeight = tempChatLineHeight ?? currentPreset?.chatLineHeight ?? settings.chatLineHeight;
+        
+        template.find('#chat-font-size-slider').val(chatFontSize);
+        template.find('#chat-font-size-value').text(chatFontSize + 'px');
+        template.find('#input-font-size-slider').val(inputFontSize);
+        template.find('#input-font-size-value').text(inputFontSize + 'px');
+        template.find('#chat-font-weight-slider').val(chatFontWeight);
+        template.find('#chat-font-weight-value').text(chatFontWeight.toFixed(1));
+        template.find('#chat-line-height-slider').val(chatLineHeight);
+        template.find('#chat-line-height-value').text(chatLineHeight.toFixed(1) + 'rem');
+        
+        // 임시 값 설정
+        if (tempChatFontSize === null) {
+            tempChatFontSize = chatFontSize;
+        }
+        if (tempInputFontSize === null) {
+            tempInputFontSize = inputFontSize;
+        }
+        if (tempChatFontWeight === null) {
+            tempChatFontWeight = chatFontWeight;
+        }
+        if (tempChatLineHeight === null) {
+            tempChatLineHeight = chatLineHeight;
+        }
+    } else {
+        // 프리셋이 없을 때 기본값 설정
+        const chatFontSize = tempChatFontSize ?? settings.chatFontSize;
+        const inputFontSize = tempInputFontSize ?? settings.inputFontSize;
+        const chatFontWeight = tempChatFontWeight ?? settings.chatFontWeight;
+        const chatLineHeight = tempChatLineHeight ?? settings.chatLineHeight;
+        
+        template.find('#chat-font-size-slider').val(chatFontSize);
+        template.find('#chat-font-size-value').text(chatFontSize + 'px');
+        template.find('#input-font-size-slider').val(inputFontSize);
+        template.find('#input-font-size-value').text(inputFontSize + 'px');
+        template.find('#chat-font-weight-slider').val(chatFontWeight);
+        template.find('#chat-font-weight-value').text(chatFontWeight.toFixed(1));
+        template.find('#chat-line-height-slider').val(chatLineHeight);
+        template.find('#chat-line-height-value').text(chatLineHeight.toFixed(1) + 'rem');
     }
 }
 
@@ -338,7 +450,13 @@ function saveOriginalUIStyles() {
     // 현재 임시 폰트 상태 저장
     originalUIStyles = {
         tempUiFont: tempUiFont,
-        tempMessageFont: tempMessageFont
+        tempMessageFont: tempMessageFont,
+        tempUiFontSize: tempUiFontSize,
+        tempUiFontWeight: tempUiFontWeight,
+        tempChatFontSize: tempChatFontSize,
+        tempInputFontSize: tempInputFontSize,
+        tempChatFontWeight: tempChatFontWeight,
+        tempChatLineHeight: tempChatLineHeight
     };
 }
 
@@ -348,9 +466,21 @@ function restoreOriginalUIStyles() {
     if (originalUIStyles) {
         tempUiFont = originalUIStyles.tempUiFont;
         tempMessageFont = originalUIStyles.tempMessageFont;
+        tempUiFontSize = originalUIStyles.tempUiFontSize;
+        tempUiFontWeight = originalUIStyles.tempUiFontWeight;
+        tempChatFontSize = originalUIStyles.tempChatFontSize;
+        tempInputFontSize = originalUIStyles.tempInputFontSize;
+        tempChatFontWeight = originalUIStyles.tempChatFontWeight;
+        tempChatLineHeight = originalUIStyles.tempChatLineHeight;
     } else {
         tempUiFont = null;
         tempMessageFont = null;
+        tempUiFontSize = null;
+        tempUiFontWeight = null;
+        tempChatFontSize = null;
+        tempInputFontSize = null;
+        tempChatFontWeight = null;
+        tempChatLineHeight = null;
     }
     updateUIFont();
 }
@@ -403,6 +533,26 @@ function updateUIFont() {
     
     const fontCss = [];
     const uiFontCss = [];
+    const cssVariables = [];
+    
+    // CSS 변수 설정
+    const uiFontSize = tempUiFontSize ?? getCurrentPresetUIFontSize() ?? settings.uiFontSize;
+    const uiFontWeight = tempUiFontWeight ?? getCurrentPresetUIFontWeight() ?? settings.uiFontWeight;
+    const chatFontSize = tempChatFontSize ?? getCurrentPresetChatFontSize() ?? settings.chatFontSize;
+    const inputFontSize = tempInputFontSize ?? getCurrentPresetInputFontSize() ?? settings.inputFontSize;
+    const chatFontWeight = tempChatFontWeight ?? getCurrentPresetChatFontWeight() ?? settings.chatFontWeight;
+    const chatLineHeight = tempChatLineHeight ?? getCurrentPresetChatLineHeight() ?? settings.chatLineHeight;
+    
+    cssVariables.push(`
+:root {
+  --font-manager-ui-size: ${uiFontSize}px;
+  --font-manager-ui-weight: ${uiFontWeight};
+  --font-manager-chat-size: ${chatFontSize}px;
+  --font-manager-input-size: ${inputFontSize}px;
+  --font-manager-chat-weight: ${chatFontWeight};
+  --font-manager-chat-line-height: ${chatLineHeight}rem;
+}
+    `);
     
     // 모든 폰트 CSS 적용
     const fonts = settings?.fonts || [];
@@ -437,9 +587,26 @@ html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
   font-family: "${actualFontFamily}", Sans-Serif !important;
+  font-size: var(--font-manager-ui-size) !important;
   font-weight: normal !important;
   line-height: 1.1rem !important;
-  -webkit-text-stroke: var(--ui-font-weight) !important;
+  -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+}
+        `);
+    } else {
+        // 폰트가 선택되지 않았어도 조절값은 적용
+        uiFontCss.push(`
+/* UI FONT SIZE/WEIGHT APPLICATION - Font Manager Override */
+html body,
+html body input,
+html body select,
+html body span,
+html body code,
+html body .list-group-item,
+html body .ui-widget-content .ui-menu-item-wrapper,
+html body textarea:not(#send_textarea) {
+  font-size: var(--font-manager-ui-size) !important;
+  -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
         `);
     }
@@ -461,16 +628,40 @@ html body textarea:not(#send_textarea) {
 /* MESSAGE FONT APPLICATION - Font Manager Override */
 .mes * {
   font-family: "${actualMessageFontFamily}" !important;
-  -webkit-text-stroke: var(--chat-font-weight);
+  font-size: var(--font-manager-chat-size) !important;
+  line-height: var(--font-manager-chat-line-height) !important;
+  -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
 
 #send_form textarea {
   font-family: "${actualMessageFontFamily}" !important;
+  font-size: var(--font-manager-input-size) !important;
+  -webkit-text-stroke: var(--font-manager-chat-weight) !important;
+}
+        `);
+    } else {
+        // 폰트가 선택되지 않았어도 조절값은 적용
+        uiFontCss.push(`
+/* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override */
+.mes * {
+  font-size: var(--font-manager-chat-size) !important;
+  line-height: var(--font-manager-chat-line-height) !important;
+  -webkit-text-stroke: var(--font-manager-chat-weight) !important;
+}
+
+#send_form textarea {
+  font-size: var(--font-manager-input-size) !important;
+  -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
         `);
     }
     
     const finalCss = [
+        '/*',
+        ' * === CSS VARIABLES ===',
+        ' */',
+        cssVariables.join('\n\n'),
+        '\n\n',
         '/*',
         ' * === FONT DEFINITIONS ===',
         ' */',
@@ -508,6 +699,68 @@ function getCurrentPresetMessageFont() {
     return null;
 }
 
+// 현재 프리셋의 UI 폰트 조절값들 가져오기
+function getCurrentPresetUIFontSize() {
+    const currentPresetId = settings?.currentPreset;
+    if (currentPresetId) {
+        const presets = settings?.presets || [];
+        const preset = presets.find(p => p.id === currentPresetId);
+        return preset?.uiFontSize || null;
+    }
+    return null;
+}
+
+function getCurrentPresetUIFontWeight() {
+    const currentPresetId = settings?.currentPreset;
+    if (currentPresetId) {
+        const presets = settings?.presets || [];
+        const preset = presets.find(p => p.id === currentPresetId);
+        return preset?.uiFontWeight || null;
+    }
+    return null;
+}
+
+// 현재 프리셋의 채팅 폰트 조절값들 가져오기
+function getCurrentPresetChatFontSize() {
+    const currentPresetId = settings?.currentPreset;
+    if (currentPresetId) {
+        const presets = settings?.presets || [];
+        const preset = presets.find(p => p.id === currentPresetId);
+        return preset?.chatFontSize || null;
+    }
+    return null;
+}
+
+function getCurrentPresetInputFontSize() {
+    const currentPresetId = settings?.currentPreset;
+    if (currentPresetId) {
+        const presets = settings?.presets || [];
+        const preset = presets.find(p => p.id === currentPresetId);
+        return preset?.inputFontSize || null;
+    }
+    return null;
+}
+
+function getCurrentPresetChatFontWeight() {
+    const currentPresetId = settings?.currentPreset;
+    if (currentPresetId) {
+        const presets = settings?.presets || [];
+        const preset = presets.find(p => p.id === currentPresetId);
+        return preset?.chatFontWeight || null;
+    }
+    return null;
+}
+
+function getCurrentPresetChatLineHeight() {
+    const currentPresetId = settings?.currentPreset;
+    if (currentPresetId) {
+        const presets = settings?.presets || [];
+        const preset = presets.find(p => p.id === currentPresetId);
+        return preset?.chatLineHeight || null;
+    }
+    return null;
+}
+
 // UI 폰트 임시 적용
 function applyTempUIFont(fontName) {
     tempUiFont = fontName;
@@ -520,6 +773,37 @@ function applyTempMessageFont(fontName) {
     updateUIFont();
 }
 
+// 조절값 임시 적용 함수들
+function applyTempUIFontSize(size) {
+    tempUiFontSize = size;
+    updateUIFont();
+}
+
+function applyTempUIFontWeight(weight) {
+    tempUiFontWeight = weight;
+    updateUIFont();
+}
+
+function applyTempChatFontSize(size) {
+    tempChatFontSize = size;
+    updateUIFont();
+}
+
+function applyTempInputFontSize(size) {
+    tempInputFontSize = size;
+    updateUIFont();
+}
+
+function applyTempChatFontWeight(weight) {
+    tempChatFontWeight = weight;
+    updateUIFont();
+}
+
+function applyTempChatLineHeight(height) {
+    tempChatLineHeight = height;
+    updateUIFont();
+}
+
 // 이벤트 리스너 설정
 function setupEventListeners(template) {
     // 프리셋 드롭다운 변경 이벤트
@@ -528,9 +812,11 @@ function setupEventListeners(template) {
         if (presetId) {
             selectedPresetId = presetId;
             
-            // 선택된 프리셋의 폰트들 즉시 적용
+            // 선택된 프리셋의 폰트들과 조절값들 즉시 적용
             const presets = settings?.presets || [];
             const currentPreset = presets.find(p => p.id === presetId);
+            
+            // 폰트 적용
             if (currentPreset && currentPreset.uiFont) {
                 applyTempUIFont(currentPreset.uiFont);
             } else {
@@ -542,9 +828,18 @@ function setupEventListeners(template) {
                 applyTempMessageFont(null); // 기본 폰트
             }
             
+            // 조절값들 적용
+            tempUiFontSize = currentPreset?.uiFontSize ?? settings.uiFontSize;
+            tempUiFontWeight = currentPreset?.uiFontWeight ?? settings.uiFontWeight;
+            tempChatFontSize = currentPreset?.chatFontSize ?? settings.chatFontSize;
+            tempInputFontSize = currentPreset?.inputFontSize ?? settings.inputFontSize;
+            tempChatFontWeight = currentPreset?.chatFontWeight ?? settings.chatFontWeight;
+            tempChatLineHeight = currentPreset?.chatLineHeight ?? settings.chatLineHeight;
+            
             renderUIFontSection(template);
             renderMessageFontSection(template);
             setupEventListeners(template);
+            updateUIFont(); // 조절값 변경사항 즉시 적용
         }
     });
     
@@ -627,6 +922,44 @@ function setupEventListeners(template) {
         }
     });
     
+    // UI 폰트 조절바 이벤트들
+    template.find('#ui-font-size-slider').off('input').on('input', function() {
+        const size = parseInt($(this).val());
+        template.find('#ui-font-size-value').text(size + 'px');
+        applyTempUIFontSize(size);
+    });
+    
+    template.find('#ui-font-weight-slider').off('input').on('input', function() {
+        const weight = parseFloat($(this).val());
+        template.find('#ui-font-weight-value').text(weight.toFixed(1));
+        applyTempUIFontWeight(weight);
+    });
+    
+    // 채팅 폰트 조절바 이벤트들
+    template.find('#chat-font-size-slider').off('input').on('input', function() {
+        const size = parseInt($(this).val());
+        template.find('#chat-font-size-value').text(size + 'px');
+        applyTempChatFontSize(size);
+    });
+    
+    template.find('#input-font-size-slider').off('input').on('input', function() {
+        const size = parseInt($(this).val());
+        template.find('#input-font-size-value').text(size + 'px');
+        applyTempInputFontSize(size);
+    });
+    
+    template.find('#chat-font-weight-slider').off('input').on('input', function() {
+        const weight = parseFloat($(this).val());
+        template.find('#chat-font-weight-value').text(weight.toFixed(1));
+        applyTempChatFontWeight(weight);
+    });
+    
+    template.find('#chat-line-height-slider').off('input').on('input', function() {
+        const height = parseFloat($(this).val());
+        template.find('#chat-line-height-value').text(height.toFixed(1) + 'rem');
+        applyTempChatLineHeight(height);
+    });
+    
     // 소스코드 가져오기 버튼
     template.find('#import-font-btn').off('click').on('click', async function() {
         const sourceCode = template.find('#font-source-textarea').val().trim();
@@ -669,6 +1002,13 @@ function saveCurrentPreset() {
     if (preset) {
         preset.uiFont = tempUiFont;
         preset.messageFont = tempMessageFont;
+        // 조절값들도 저장
+        preset.uiFontSize = tempUiFontSize ?? settings.uiFontSize;
+        preset.uiFontWeight = tempUiFontWeight ?? settings.uiFontWeight;
+        preset.chatFontSize = tempChatFontSize ?? settings.chatFontSize;
+        preset.inputFontSize = tempInputFontSize ?? settings.inputFontSize;
+        preset.chatFontWeight = tempChatFontWeight ?? settings.chatFontWeight;
+        preset.chatLineHeight = tempChatLineHeight ?? settings.chatLineHeight;
         
         // 현재 프리셋으로 설정
         settings.currentPreset = selectedPresetId;
