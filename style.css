@@ -204,6 +204,34 @@
     white-space: nowrap;
 }
 
+/* 기본값 버튼 행 */
+.default-button-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+}
+
+.default-btn {
+    padding: 8px 20px;
+    background-color: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    font-size: calc(var(--mainFontSize) * 0.9);
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.default-btn:hover {
+    background-color: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeBodyColor);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 /* 폰트 추가 영역 */
 .font-add-area {
     border: 1px solid var(--SmartThemeBorderColor);
@@ -306,6 +334,7 @@
     border-radius: 5px;
     background-color: var(--black50a);
     transition: all 0.2s ease;
+    gap: 10px;
 }
 
 .font-item:hover {
@@ -323,9 +352,7 @@
 }
 
 .font-preview {
-    font-size: calc(var(--mainFontSize) * 1.2);
-    margin-left: 15px;
-    color: var(--SmartThemeQuoteColor);
+    display: none;
 }
 
 .remove-font-btn {
@@ -337,7 +364,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 14px;
-    margin-left: 10px;
+    flex-shrink: 0;
 }
 
 .remove-font-btn:hover {
@@ -454,13 +481,10 @@
     }
     
     .font-item {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
         gap: 8px;
-    }
-    
-    .font-preview {
-        margin-left: 0;
+        padding: 8px;
     }
     
     .ui-font-selector,
@@ -484,6 +508,12 @@
         max-width: 60px;
         font-size: calc(var(--mainFontSize) * 0.8);
         padding: 3px 5px;
+    }
+    
+    .default-btn {
+        padding: 6px 16px;
+        font-size: calc(var(--mainFontSize) * 0.85);
+        min-width: 70px;
     }
 }
 
@@ -532,5 +562,11 @@
         min-width: 40px;
         max-width: 55px;
         padding: 3px 4px;
+    }
+    
+    .default-btn {
+        padding: 5px 12px;
+        font-size: calc(var(--mainFontSize) * 0.8);
+        min-width: 60px;
     }
 } 
