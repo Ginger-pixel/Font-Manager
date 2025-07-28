@@ -603,7 +603,7 @@ function updateUIFont() {
 :root {
   --font-manager-ui-size: ${uiFontSize}px;
   --font-manager-ui-weight: ${uiFontWeight}px;
-  --font-manager-ui-color: ${uiFontColor ? '#' + uiFontColor : 'inherit'};
+  --font-manager-ui-color: ${uiFontColor && isValidHexColor(uiFontColor) ? '#' + uiFontColor : 'var(--SmartThemeBodyColor)'};
   --font-manager-chat-size: ${chatFontSize}px;
   --font-manager-input-size: ${inputFontSize}px;
   --font-manager-chat-weight: ${chatFontWeight}px;
@@ -651,7 +651,7 @@ html body textarea:not(#send_textarea) {
 }
 
 /* UI COLOR APPLICATION - Specific Elements Only */
-.drawer-icon {
+.drawer-icon:not(.mes_buttons *):not(.mes_edit *):not(.mes_block *) {
   color: var(--font-manager-ui-color) !important;
 }
 
@@ -673,9 +673,43 @@ html body textarea:not(#send_textarea) {
 }
 
 .drawer-content label:has(input) {
-  & * {
+  & *:not(.mes *):not(.mes_buttons *):not(.mes_edit *):not(.mes_block *) {
     color: var(--font-manager-ui-color) !important;
   }
+}
+
+/* 메시지 영역 아이콘 보호 */
+.mes .mes_buttons,
+.mes .mes_edit,
+.mes .mes_block,
+.mes_buttons,
+.mes_edit,
+.mes_block,
+.mes .fa-solid,
+.mes .fa-regular,
+.mes .fa-brands,
+.mes i[class*="fa-"],
+.mes .menuButton,
+.mes .menu_button {
+  color: inherit !important;
+}
+
+.mes .mes_buttons *,
+.mes .mes_edit *,
+.mes .mes_block *,
+.mes_buttons *,
+.mes_edit *,
+.mes_block *,
+.mes .mes_buttons i,
+.mes .mes_edit i,
+.mes .mes_block i,
+.mes .fa-solid,
+.mes .fa-regular,
+.mes .fa-brands,
+.mes i[class*="fa-"],
+.mes .menuButton *,
+.mes .menu_button * {
+  color: inherit !important;
 }
         `);
     } else {
@@ -695,7 +729,7 @@ html body textarea:not(#send_textarea) {
 }
 
 /* UI COLOR APPLICATION - Specific Elements Only */
-.drawer-icon {
+.drawer-icon:not(.mes_buttons *):not(.mes_edit *):not(.mes_block *) {
   color: var(--font-manager-ui-color) !important;
 }
 
@@ -717,9 +751,43 @@ html body textarea:not(#send_textarea) {
 }
 
 .drawer-content label:has(input) {
-  & * {
+  & *:not(.mes *):not(.mes_buttons *):not(.mes_edit *):not(.mes_block *) {
     color: var(--font-manager-ui-color) !important;
   }
+}
+
+/* 메시지 영역 아이콘 보호 */
+.mes .mes_buttons,
+.mes .mes_edit,
+.mes .mes_block,
+.mes_buttons,
+.mes_edit,
+.mes_block,
+.mes .fa-solid,
+.mes .fa-regular,
+.mes .fa-brands,
+.mes i[class*="fa-"],
+.mes .menuButton,
+.mes .menu_button {
+  color: inherit !important;
+}
+
+.mes .mes_buttons *,
+.mes .mes_edit *,
+.mes .mes_block *,
+.mes_buttons *,
+.mes_edit *,
+.mes_block *,
+.mes .mes_buttons i,
+.mes .mes_edit i,
+.mes .mes_block i,
+.mes .fa-solid,
+.mes .fa-regular,
+.mes .fa-brands,
+.mes i[class*="fa-"],
+.mes .menuButton *,
+.mes .menu_button * {
+  color: inherit !important;
 }
         `);
     }
