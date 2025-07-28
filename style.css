@@ -648,31 +648,6 @@
     transform: scale(1.05);
 }
 
-.theme-test-form {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 15px;
-}
-
-.test-theme-detection-btn {
-    padding: 8px 16px;
-    background-color: var(--SmartThemeBlurTintColor);
-    border: 1px solid var(--SmartThemeBorderColor);
-    border-radius: 5px;
-    color: var(--SmartThemeBodyColor);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: calc(var(--mainFontSize) * 0.9);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.test-theme-detection-btn:hover {
-    background-color: var(--SmartThemeQuoteColor);
-    color: var(--SmartThemeBodyColor);
-    transform: translateY(-1px);
-}
 
 .theme-rules-list {
     max-height: 200px;

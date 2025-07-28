@@ -1143,19 +1143,6 @@ function setupEventListeners(template) {
     
     // 테마 연동 삭제 버튼들에 이벤트 추가
     setupThemeRuleEventListeners(template);
-    
-    // 테마 확인 버튼
-    template.find('#test-theme-detection-btn').off('click').on('click', function() {
-        console.log("Font Manager: 수동 테마 확인 버튼 클릭됨");
-        const detectedTheme = window.fontManagerDetectedTheme;
-        if (detectedTheme) {
-            console.log(`Font Manager: 현재 감지된 테마: ${detectedTheme}`);
-            checkAndApplyThemePreset();
-            alert(`현재 감지된 테마: ${detectedTheme}\n\n상세 결과는 콘솔(F12)에서 확인하세요.`);
-        } else {
-            alert('아직 감지된 테마가 없습니다.\n테마를 변경해보시거나 잠시 후 다시 시도해주세요.');
-        }
-    });
 }
 
 // 테마 규칙 이벤트 리스너 설정
@@ -1306,52 +1293,34 @@ function updateAllFonts() {
 
 // 테마 감지 및 자동 프리셋 적용 시작
 function startThemeDetection() {
-    console.log("Font Manager: 테마 감지 시스템 초기화 중...");
-    
     // 페이지 로드 시 한 번 실행
     setTimeout(() => {
-        console.log("Font Manager: 초기 테마 확인 실행");
         checkAndApplyThemePreset();
     }, 1000);
     
     // SillyTavern 테마 적용 이벤트 감지
     setupSillyTavernThemeListeners();
-    
-    console.log("Font Manager: 테마 감지가 시작되었습니다.");
 }
 
 // 테마 확인 및 자동 프리셋 적용
 function checkAndApplyThemePreset() {
     const themeRules = settings?.themeRules || [];
-    console.log(`Font Manager: 테마 확인 시작 - 등록된 규칙 수: ${themeRules.length}`);
     
     if (themeRules.length === 0) {
-        console.log("Font Manager: 등록된 테마 연동 규칙이 없습니다.");
         return;
     }
-    
-    console.log("Font Manager: 등록된 테마 규칙들:", themeRules.map(rule => ({
-        id: rule.id,
-        themeName: rule.themeName,
-        presetId: rule.presetId
-    })));
     
     // 감지된 테마 이름 확인 (console.log 후킹으로 캐치된 것)
     const detectedTheme = window.fontManagerDetectedTheme;
     if (!detectedTheme) {
-        console.log("Font Manager: 감지된 테마가 없습니다.");
         return;
     }
-    
-    console.log(`Font Manager: 감지된 테마: ${detectedTheme}`);
     
     // 테마 규칙 확인
     let matchedRule = null;
     
     for (const rule of themeRules) {
         if (!rule.themeName) continue;
-        
-        console.log(`Font Manager: 규칙 '${rule.themeName}' 확인 중...`);
         
         const themeNameLower = rule.themeName.toLowerCase();
         const detectedThemeLower = detectedTheme.toLowerCase();
@@ -1361,11 +1330,8 @@ function checkAndApplyThemePreset() {
                          detectedThemeLower.includes(themeNameLower) ||
                          themeNameLower.includes(detectedThemeLower);
         
-        console.log(`Font Manager: - 매칭 결과: ${isMatched}`);
-        
         if (isMatched) {
             matchedRule = rule;
-            console.log(`Font Manager: ✅ 테마 매칭됨 - '${rule.themeName}' -> 프리셋 적용`);
             break;
         }
     }
@@ -1373,35 +1339,17 @@ function checkAndApplyThemePreset() {
     if (matchedRule) {
         // 매칭된 프리셋 적용
         applyPresetById(matchedRule.presetId);
-    } else {
-        console.log("Font Manager: 매칭되는 테마를 찾지 못했습니다.");
     }
 }
 
 // ID로 프리셋 적용
 function applyPresetById(presetId) {
-    console.log(`Font Manager: 프리셋 적용 시도 - ID: ${presetId}`);
-    
     const presets = settings?.presets || [];
     const preset = presets.find(p => p.id === presetId);
     
     if (!preset) {
-        console.warn(`Font Manager: 프리셋을 찾을 수 없습니다 (ID: ${presetId})`);
-        console.log(`Font Manager: 사용 가능한 프리셋들:`, presets.map(p => ({id: p.id, name: p.name})));
         return;
     }
-    
-    console.log(`Font Manager: 프리셋 '${preset.name}' 적용 중...`);
-    console.log(`Font Manager: 프리셋 내용:`, {
-        uiFont: preset.uiFont,
-        messageFont: preset.messageFont,
-        uiFontSize: preset.uiFontSize,
-        uiFontWeight: preset.uiFontWeight,
-        chatFontSize: preset.chatFontSize,
-        inputFontSize: preset.inputFontSize,
-        chatFontWeight: preset.chatFontWeight,
-        chatLineHeight: preset.chatLineHeight
-    });
     
     // 현재 프리셋 설정
     settings.currentPreset = presetId;
@@ -1424,30 +1372,15 @@ function applyPresetById(presetId) {
     settings.chatFontWeight = tempChatFontWeight;
     settings.chatLineHeight = tempChatLineHeight;
     
-    console.log(`Font Manager: 임시 변수 설정 완료`, {
-        tempUiFont,
-        tempMessageFont,
-        tempUiFontSize,
-        tempUiFontWeight,
-        tempChatFontSize,
-        tempInputFontSize,
-        tempChatFontWeight,
-        tempChatLineHeight
-    });
-    
     // 폰트 적용
     updateUIFont();
     
     // 설정 저장
     saveSettingsDebounced();
-    
-    console.log(`Font Manager: ✅ 프리셋 '${preset.name}' 자동 적용 완료!`);
 }
 
 // SillyTavern 테마 이벤트 감지 설정
 function setupSillyTavernThemeListeners() {
-    console.log("Font Manager: SillyTavern 테마 감지 설정 중...");
-    
     // console.log 후킹으로 "theme applied:" 메시지 감지
     const originalConsoleLog = console.log;
     console.log = function(...args) {
@@ -1458,18 +1391,14 @@ function setupSillyTavernThemeListeners() {
             const themeMatch = message.match(/theme applied:\s*(.+)/i);
             if (themeMatch) {
                 const themeName = themeMatch[1].trim();
-                console.log(`Font Manager: 테마 적용 메시지 감지 - ${themeName}`);
                 // 감지된 테마 이름을 저장
                 window.fontManagerDetectedTheme = themeName;
                 setTimeout(() => {
-                    console.log("Font Manager: 테마 변경으로 인한 프리셋 확인");
                     checkAndApplyThemePreset();
                 }, 200);
             }
         }
     };
-    
-    console.log("Font Manager: 테마 감지 설정 완료");
 }
 
 // 슬래시 커맨드 등록
@@ -1485,10 +1414,7 @@ function registerSlashCommands() {
             namedArgumentList: [],
             returns: '폰트 관리 창 열기',
         }));
-        
-        console.log("폰트 관리 슬래시 커맨드가 등록되었습니다: /font");
     } catch (error) {
-        console.error("슬래시 커맨드 등록 실패:", error);
         // 실패 시 5초 후 재시도
         setTimeout(registerSlashCommands, 5000);
     }
@@ -1507,7 +1433,8 @@ async function addToWandMenu() {
             setTimeout(addToWandMenu, 1000);
         }
     } catch (error) {
-        console.error("button.html 로드 실패:", error);
+        // 버튼 로드 실패시 재시도
+        setTimeout(addToWandMenu, 1000);
     }
 }
 
@@ -1519,6 +1446,4 @@ jQuery(async () => {
     
     // SillyTavern 로드 완료 후 슬래시 커맨드 등록
     setTimeout(registerSlashCommands, 2000);
-    
-    console.log("Font-Manager 확장이 로드되었습니다.");
 }); 
