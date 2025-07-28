@@ -648,11 +648,16 @@ const sanitize = (css) => {
 
 // UI 폰트 업데이트
 function updateUIFont() {
-    if (!fontStyle) {
-        fontStyle = document.createElement('style');
-        fontStyle.id = 'font-manager--ui-fonts';
-        document.head.appendChild(fontStyle);
+    // 기존 스타일 완전히 제거
+    if (fontStyle) {
+        fontStyle.remove();
+        fontStyle = null;
     }
+    
+    // 새 스타일 엘리먼트 생성
+    fontStyle = document.createElement('style');
+    fontStyle.id = 'font-manager--ui-fonts';
+    document.head.appendChild(fontStyle);
     
     // 폰트 매니저가 비활성화되어 있으면 스타일을 비움
     if (!settings.enabled) {
@@ -694,6 +699,7 @@ function updateUIFont() {
     
     // 현재 UI 폰트 적용
     const currentFontName = tempUiFont || getCurrentPresetUIFont();
+    console.log('[Font-Manager] UI 폰트 적용:', currentFontName);
     
     // 실제 사용할 font-family 이름 찾기
     let actualFontFamily = currentFontName;
@@ -723,7 +729,7 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
+        // 기본 폰트일 때 시스템 기본 폰트 스택을 명시적으로 설정
         uiFontCss.push(`
 /* UI FONT SIZE/WEIGHT APPLICATION - Font Manager Override (Default Font) */
 html body,
@@ -734,7 +740,7 @@ html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
 html body textarea:not(#send_textarea) {
-  font-family: initial !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
@@ -743,6 +749,7 @@ html body textarea:not(#send_textarea) {
     
     // 현재 메시지 폰트 적용
     const currentMessageFontName = tempMessageFont || getCurrentPresetMessageFont();
+    console.log('[Font-Manager] 메시지 폰트 적용:', currentMessageFontName);
     
     // 실제 사용할 메시지 font-family 이름 찾기
     let actualMessageFontFamily = currentMessageFontName;
@@ -770,18 +777,18 @@ html body textarea:not(#send_textarea) {
 }
         `);
     } else {
-        // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
+        // 기본 폰트일 때 시스템 기본 폰트 스택을 명시적으로 설정
         uiFontCss.push(`
 /* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override (Default Font) */
 .mes * {
-  font-family: initial !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   font-size: var(--font-manager-chat-size) !important;
   line-height: var(--font-manager-chat-line-height) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
 
 #send_form textarea {
-  font-family: initial !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
@@ -895,12 +902,14 @@ function getCurrentPresetChatLineHeight() {
 
 // UI 폰트 임시 적용
 function applyTempUIFont(fontName) {
+    console.log('[Font-Manager] UI 폰트 변경:', fontName);
     tempUiFont = fontName;
     updateUIFont();
 }
 
 // 메시지 폰트 임시 적용
 function applyTempMessageFont(fontName) {
+    console.log('[Font-Manager] 메시지 폰트 변경:', fontName);
     tempMessageFont = fontName;
     updateUIFont();
 }
@@ -1045,20 +1054,28 @@ function setupEventListeners(template) {
     // UI 폰트 드롭다운 변경 이벤트
     template.find('#ui-font-dropdown').off('change').on('change', function() {
         const fontName = $(this).val();
-        if (fontName) {
+        console.log('[Font-Manager] UI 폰트 드롭다운 변경:', fontName);
+        if (fontName && fontName !== "") {
             applyTempUIFont(fontName);
         } else {
-            applyTempUIFont(null); // 기본 폰트
+            // 기본 폰트 선택 - 명시적으로 null 설정하고 즉시 업데이트
+            console.log('[Font-Manager] UI 기본 폰트 선택');
+            tempUiFont = null;
+            updateUIFont();
         }
     });
     
     // 메시지 폰트 드롭다운 변경 이벤트
     template.find('#message-font-dropdown').off('change').on('change', function() {
         const fontName = $(this).val();
-        if (fontName) {
+        console.log('[Font-Manager] 메시지 폰트 드롭다운 변경:', fontName);
+        if (fontName && fontName !== "") {
             applyTempMessageFont(fontName);
         } else {
-            applyTempMessageFont(null); // 기본 폰트
+            // 기본 폰트 선택 - 명시적으로 null 설정하고 즉시 업데이트
+            console.log('[Font-Manager] 메시지 기본 폰트 선택');
+            tempMessageFont = null;
+            updateUIFont();
         }
     });
     
