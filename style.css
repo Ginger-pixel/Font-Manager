@@ -853,8 +853,7 @@
     color: var(--SmartThemeBodyColor);
 }
 
-.multi-language-font-section label,
-.multi-language-font-section span {
+.multi-language-font-section * {
     color: var(--SmartThemeBodyColor) !important;
 }
 
