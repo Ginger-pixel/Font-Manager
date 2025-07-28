@@ -826,20 +826,20 @@ html body textarea:not(#send_textarea) {
         const languageFontCss = [];
         const languageFallbacks = [];
         
-        // 언어별 유니코드 범위 정의 (더 포괄적으로)
+        // 언어별 유니코드 범위 정의
         const UNICODE_RANGES = {
-            english: ['U+0020-007F', 'U+00A0-00FF', 'U+0100-017F', 'U+1E00-1EFF'], // Latin Basic, Extended
-            korean: ['U+1100-11FF', 'U+3130-318F', 'U+AC00-D7AF', 'U+A960-A97F'], // Hangul (전체 범위)
-            japanese: ['U+3040-309F', 'U+30A0-30FF', 'U+31F0-31FF', 'U+FF65-FF9F'], // Hiragana, Katakana
-            chinese: ['U+4E00-9FFF', 'U+3400-4DBF', 'U+2F00-2FDF', 'U+F900-FAFF'] // CJK Ideographs
+            english: ['U+0020-007F', 'U+00A0-00FF', 'U+0100-017F', 'U+1E00-1EFF'],
+            korean: ['U+1100-11FF', 'U+3130-318F', 'U+AC00-D7AF', 'U+A960-A97F'],
+            japanese: ['U+3040-309F', 'U+30A0-30FF', 'U+31F0-31FF', 'U+FF65-FF9F'],
+            chinese: ['U+4E00-9FFF', 'U+3400-4DBF', 'U+2F00-2FDF', 'U+F900-FAFF']
         };
         
-        // 각 언어별 @font-face 정의 생성 (실제 폰트 데이터 사용)
+        // 각 언어별 @font-face 정의 생성
         Object.entries(currentLanguageFonts).forEach(([lang, fontName]) => {
             if (fontName && UNICODE_RANGES[lang]) {
                 const selectedFont = fonts.find(font => font.name === fontName);
                 if (selectedFont && selectedFont.data) {
-                    // 실제 폰트 데이터가 있는 경우 사용
+                    // 폰트 데이터가 있는 경우
                     const unicodeRange = UNICODE_RANGES[lang].join(', ');
                     const actualFontFamily = selectedFont.fontFamily || fontName;
                     
@@ -858,7 +858,7 @@ html body textarea:not(#send_textarea) {
   unicode-range: ${unicodeRange};
 }`);
                 } else {
-                    // 폰트 데이터가 없는 경우 시스템 폰트 사용
+                    // 시스템 폰트 사용
                     const actualFontFamily = selectedFont ? (selectedFont.fontFamily || fontName) : fontName;
                     const unicodeRange = UNICODE_RANGES[lang].join(', ');
                     
@@ -875,7 +875,7 @@ html body textarea:not(#send_textarea) {
         
         // 다국어 폰트 적용 CSS
         if (languageFontCss.length > 0) {
-            const multiLangCss = `
+            uiFontCss.push(`
 /* MULTI-LANGUAGE FONT DEFINITIONS */
 ${languageFontCss.join('')}
 
@@ -892,15 +892,9 @@ ${languageFontCss.join('')}
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
 }
-            `;
-            
-            // 디버깅을 위한 콘솔 출력
-            console.log('[Font-Manager] 다국어 CSS 생성됨:', multiLangCss);
-            console.log('[Font-Manager] 언어별 폰트 설정:', currentLanguageFonts);
-            
-            uiFontCss.push(multiLangCss);
+            `);
         } else {
-            // 다국어 활성화되었지만 설정된 폰트가 없는 경우
+            // 설정된 폰트가 없는 경우
             uiFontCss.push(`
 /* MULTI-LANGUAGE MODE - NO FONTS SET */
 .mes *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([class*="fa-"]):not(i[class*="fa"]) {
@@ -918,7 +912,7 @@ ${languageFontCss.join('')}
             `);
         }
     } else {
-        // 기존 메시지 폰트 모드
+        // 메시지 폰트 모드
         const currentMessageFontName = isMessageFontExplicitlyDefault ? null : (tempMessageFont ?? settings.currentMessageFont);
         
         // 실제 사용할 메시지 font-family 이름 찾기
@@ -966,7 +960,7 @@ ${languageFontCss.join('')}
         }
     }
     
-    // FontAwesome 아이콘 보호 (공통)
+    // FontAwesome 아이콘 보호
     uiFontCss.push(`
 /* 메시지 영역 FontAwesome 아이콘 보호 */
 .mes .fa, .mes .fas, .mes .far, .mes .fab, .mes .fal, .mes .fad, .mes .fass, .mes .fasr, .mes .fasl, .mes .fasd,
