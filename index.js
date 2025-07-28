@@ -14,6 +14,9 @@ const defaultSettings = {
     presets: [],
     currentPreset: null,
     enabled: false, // 폰트 매니저 활성화 상태 - 디폴트로 비활성화
+    // 현재 선택된 폰트들
+    currentUiFont: null,
+    currentMessageFont: null,
     // UI 폰트 조절 값들
     uiFontSize: 14,
     uiFontWeight: 0,
@@ -57,6 +60,9 @@ function initSettings() {
     settings.currentPreset = settings.currentPreset ?? null;
     settings.enabled = settings.enabled ?? false;
     settings.themeRules = settings.themeRules ?? [];
+    // 폰트 이름 기본값 보장
+    settings.currentUiFont = settings.currentUiFont ?? null;
+    settings.currentMessageFont = settings.currentMessageFont ?? null;
     // 조절값 기본값 보장
     settings.uiFontSize = settings.uiFontSize ?? 14;
     settings.uiFontWeight = settings.uiFontWeight ?? 0;
@@ -218,6 +224,8 @@ async function openFontManagementPopup() {
     saveOriginalUIStyles();
     
     // 전역 설정을 기본으로 적용 (프리셋보다 우선)
+    tempUiFont = settings.currentUiFont;
+    tempMessageFont = settings.currentMessageFont;
     tempUiFontSize = settings.uiFontSize;
     tempUiFontWeight = settings.uiFontWeight;
     tempChatFontSize = settings.chatFontSize;
@@ -638,8 +646,8 @@ function updateUIFont() {
         }
     });
     
-    // 현재 UI 폰트 적용 (임시 폰트 우선, 명시적 기본 폰트 선택 시 null)
-    const currentFontName = isUIFontExplicitlyDefault ? null : tempUiFont;
+    // 현재 UI 폰트 적용 (임시 폰트 우선, 없으면 전역 설정, 명시적 기본 폰트 선택 시 null)
+    const currentFontName = isUIFontExplicitlyDefault ? null : (tempUiFont ?? settings.currentUiFont);
     
     // 실제 사용할 font-family 이름 찾기
     let actualFontFamily = currentFontName;
@@ -687,8 +695,8 @@ html body textarea:not(#send_textarea) {
         `);
     }
     
-    // 현재 메시지 폰트 적용 (임시 폰트 우선, 명시적 기본 폰트 선택 시 null)
-    const currentMessageFontName = isMessageFontExplicitlyDefault ? null : tempMessageFont;
+    // 현재 메시지 폰트 적용 (임시 폰트 우선, 없으면 전역 설정, 명시적 기본 폰트 선택 시 null)
+    const currentMessageFontName = isMessageFontExplicitlyDefault ? null : (tempMessageFont ?? settings.currentMessageFont);
     
     // 실제 사용할 메시지 font-family 이름 찾기
     let actualMessageFontFamily = currentMessageFontName;
@@ -1218,6 +1226,10 @@ function deleteThemeRule(template, ruleId) {
 
 // 현재 설정값들을 전역 설정에 저장 (팝업 저장 버튼용)
 function saveCurrentSettingsToGlobal() {
+    // 폰트 이름들 저장
+    settings.currentUiFont = tempUiFont;
+    settings.currentMessageFont = tempMessageFont;
+    
     // 현재 임시값들을 전역 설정에 저장
     if (tempUiFontSize !== null) {
         settings.uiFontSize = tempUiFontSize;
@@ -1263,6 +1275,8 @@ function saveCurrentPreset() {
         preset.chatLineHeight = tempChatLineHeight ?? settings.chatLineHeight;
         
         // 전역 설정에도 저장
+        settings.currentUiFont = tempUiFont;
+        settings.currentMessageFont = tempMessageFont;
         if (tempUiFontSize !== null) {
             settings.uiFontSize = tempUiFontSize;
         }
