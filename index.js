@@ -235,7 +235,7 @@ async function openFontManagementPopup() {
     
     // 모든 영역 렌더링
     renderPresetDropdown(template);
-    // renderToggleSection(template); // 활성화 토글 렌더링 - 임시 비활성화
+    renderToggleSection(template); // 활성화 토글 렌더링
     renderUIFontSection(template);
     renderMessageFontSection(template);
     renderThemeLinkingSection(template);
