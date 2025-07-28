@@ -1,0 +1,304 @@
+/* Font-Manager 확장 스타일 - 폰트 관리 */
+
+/* 드롭다운과 버튼 행 */
+.font-selector-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+/* 폰트 드롭다운 */
+.font-dropdown {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black30a);
+    color: var(--SmartThemeBodyColor);
+    font-family: inherit;
+    font-size: calc(var(--mainFontSize) * 0.9);
+    transition: all 0.2s ease;
+}
+
+.font-dropdown:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
+}
+
+/* 플러스/삭제 버튼 */
+.add-font-btn, .delete-font-btn {
+    padding: 8px 12px;
+    background-color: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    color: var(--SmartThemeQuoteColor);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 16px;
+    min-width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-font-btn:hover, .delete-font-btn:hover {
+    background-color: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeBodyColor);
+    transform: scale(1.05);
+}
+
+/* 폰트 추가 영역 */
+.font-add-area {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: var(--black30a);
+}
+
+.font-add-section {
+    margin-bottom: 20px;
+}
+
+.font-add-section:last-child {
+    margin-bottom: 0;
+}
+
+.font-add-section h3 {
+    margin: 0 0 10px 0;
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 1.1);
+}
+
+.font-source-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black50a);
+    color: var(--SmartThemeBodyColor);
+    font-family: 'Courier New', monospace;
+    font-size: calc(var(--mainFontSize) * 0.9);
+    resize: vertical;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.font-source-textarea:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
+}
+
+.font-source-textarea::placeholder {
+    color: var(--grey30);
+    opacity: 0.7;
+}
+
+.import-font-btn, .select-font-file-btn {
+    padding: 10px 20px;
+    background-color: var(--SmartThemeQuoteColor);
+    border: 1px solid var(--SmartThemeQuoteColor);
+    border-radius: 5px;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    font-size: var(--mainFontSize);
+    transition: all 0.2s ease;
+}
+
+.import-font-btn:hover, .select-font-file-btn:hover {
+    background-color: var(--SmartThemeBodyColor);
+    color: var(--SmartThemeQuoteColor);
+    transform: translateY(-1px);
+}
+
+.font-file-input {
+    display: none;
+}
+
+/* 폰트 리스트 영역 */
+.font-list-area {
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    padding: 15px;
+    background-color: var(--black30a);
+    overflow-y: auto;
+}
+
+.font-list-title {
+    margin: 0 0 15px 0;
+    color: var(--SmartThemeBodyColor);
+    font-size: calc(var(--mainFontSize) * 1.1);
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    padding-bottom: 10px;
+}
+
+.font-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    margin-bottom: 8px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black50a);
+    transition: all 0.2s ease;
+}
+
+.font-item:hover {
+    background-color: var(--SmartThemeBlurTintColor);
+}
+
+.font-item:last-child {
+    margin-bottom: 0;
+}
+
+.font-name {
+    color: var(--SmartThemeBodyColor);
+    font-size: var(--mainFontSize);
+    flex: 1;
+}
+
+.font-preview {
+    font-size: calc(var(--mainFontSize) * 1.2);
+    margin-left: 15px;
+    color: var(--SmartThemeQuoteColor);
+}
+
+.remove-font-btn {
+    padding: 6px 8px;
+    background-color: transparent;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 3px;
+    color: var(--SmartThemeBodyColor);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    margin-left: 10px;
+}
+
+.remove-font-btn:hover {
+    background-color: var(--SmartThemeQuoteColor);
+    color: var(--SmartThemeBodyColor);
+    transform: scale(1.05);
+}
+
+/* 빈 상태 메시지 */
+.no-fonts-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+    color: var(--SmartThemeQuoteColor);
+    opacity: 0.8;
+    text-align: center;
+}
+
+.no-fonts-message h4 {
+    margin: 0 0 5px 0;
+    font-size: var(--mainFontSize);
+    color: var(--SmartThemeBodyColor);
+}
+
+.no-fonts-message p {
+    margin: 0;
+    font-size: calc(var(--mainFontSize) * 0.9);
+}
+
+/* 요술봉메뉴 버튼 스타일 */
+#font_manager_button {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-radius: 5px;
+    padding: 8px 12px;
+}
+
+#font_manager_button:hover {
+    background-color: var(--SmartThemeQuoteColor);
+    filter: brightness(1.1);
+}
+
+.extensionsMenuExtensionButton {
+    margin-right: 10px;
+    width: 16px;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+#font_manager_button:hover .extensionsMenuExtensionButton {
+    transform: scale(1.1);
+}
+
+/* 폰트 이름 설정 팝업 스타일 */
+.font-name-popup-content {
+    padding: 20px;
+}
+
+.font-name-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black30a);
+    color: var(--SmartThemeBodyColor);
+    font-size: var(--mainFontSize);
+    margin-top: 10px;
+    box-sizing: border-box;
+}
+
+.font-name-input:focus {
+    outline: none;
+    border-color: var(--SmartThemeQuoteColor);
+    box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
+}
+
+/* 스크롤바 스타일 */
+.font-list-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+.font-list-area::-webkit-scrollbar-track {
+    background: var(--black30a);
+    border-radius: 4px;
+}
+
+.font-list-area::-webkit-scrollbar-thumb {
+    background: var(--SmartThemeBorderColor);
+    border-radius: 4px;
+}
+
+.font-list-area::-webkit-scrollbar-thumb:hover {
+    background: var(--SmartThemeQuoteColor);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 600px) {
+    .font-selector-row {
+        gap: 8px;
+    }
+    
+    .font-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .font-preview {
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .font-selector-row {
+        gap: 6px;
+        margin-bottom: 15px;
+    }
+    
+    .font-source-textarea {
+        min-height: 80px;
+    }
+} 
