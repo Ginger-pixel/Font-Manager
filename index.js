@@ -15,9 +15,10 @@ const defaultSettings = {
     currentPreset: null
 };
 
-// 현재 선택된 프리셋 ID와 임시 UI 폰트
+// 현재 선택된 프리셋 ID와 임시 폰트들
 let selectedPresetId = null;
 let tempUiFont = null;
+let tempMessageFont = null;
 let originalUIStyles = null;
 let fontStyle = null;
 let settings = null;
@@ -174,11 +175,15 @@ async function openFontManagementPopup() {
         if (currentPreset && currentPreset.uiFont) {
             applyTempUIFont(currentPreset.uiFont);
         }
+        if (currentPreset && currentPreset.messageFont) {
+            applyTempMessageFont(currentPreset.messageFont);
+        }
     }
     
     // 모든 영역 렌더링
     renderPresetDropdown(template);
     renderUIFontSection(template);
+    renderMessageFontSection(template);
     renderFontAddArea(template);
     renderFontList(template);
     
@@ -200,6 +205,7 @@ async function openFontManagementPopup() {
         // 취소 시 원본 스타일 복원
         restoreOriginalUIStyles();
         tempUiFont = null;
+        tempMessageFont = null;
     }
     
     // 임시 변수 초기화
@@ -247,6 +253,35 @@ function renderUIFontSection(template) {
             // 임시 폰트도 현재 프리셋 값으로 설정
             if (!tempUiFont) {
                 tempUiFont = currentPreset.uiFont;
+            }
+        } else {
+            dropdown.val("");  // 기본 폰트
+        }
+    }
+}
+
+// 메시지 폰트 섹션 렌더링
+function renderMessageFontSection(template) {
+    const fonts = settings?.fonts || [];
+    const dropdown = template.find('#message-font-dropdown');
+    
+    dropdown.empty();
+    dropdown.append('<option value="">기본 폰트</option>');
+    
+    fonts.forEach(font => {
+        const isSelected = tempMessageFont === font.name;
+        dropdown.append(`<option value="${font.name}" ${isSelected ? 'selected' : ''}>${font.name}</option>`);
+    });
+    
+    // 현재 프리셋의 메시지 폰트 설정
+    if (selectedPresetId) {
+        const presets = settings?.presets || [];
+        const currentPreset = presets.find(p => p.id === selectedPresetId);
+        if (currentPreset && currentPreset.messageFont) {
+            dropdown.val(currentPreset.messageFont);
+            // 임시 폰트도 현재 프리셋 값으로 설정
+            if (!tempMessageFont) {
+                tempMessageFont = currentPreset.messageFont;
             }
         } else {
             dropdown.val("");  // 기본 폰트
@@ -302,7 +337,8 @@ function renderFontList(template) {
 function saveOriginalUIStyles() {
     // 현재 임시 폰트 상태 저장
     originalUIStyles = {
-        tempUiFont: tempUiFont
+        tempUiFont: tempUiFont,
+        tempMessageFont: tempMessageFont
     };
 }
 
@@ -311,8 +347,10 @@ function restoreOriginalUIStyles() {
     // 원본 상태로 복원
     if (originalUIStyles) {
         tempUiFont = originalUIStyles.tempUiFont;
+        tempMessageFont = originalUIStyles.tempMessageFont;
     } else {
         tempUiFont = null;
+        tempMessageFont = null;
     }
     updateUIFont();
 }
@@ -425,6 +463,32 @@ html body .fa-solid {
         `);
     }
     
+    // 현재 메시지 폰트 적용
+    const currentMessageFontName = tempMessageFont || getCurrentPresetMessageFont();
+    
+    // 실제 사용할 메시지 font-family 이름 찾기
+    let actualMessageFontFamily = currentMessageFontName;
+    if (currentMessageFontName) {
+        const selectedMessageFont = fonts.find(font => font.name === currentMessageFontName);
+        if (selectedMessageFont && selectedMessageFont.fontFamily) {
+            actualMessageFontFamily = selectedMessageFont.fontFamily;
+        }
+    }
+    
+    if (currentMessageFontName && actualMessageFontFamily) {
+        uiFontCss.push(`
+/* MESSAGE FONT APPLICATION - Font Manager Override */
+.mes * {
+  font-family: "${actualMessageFontFamily}" !important;
+  -webkit-text-stroke: var(--chat-font-weight);
+}
+
+#send_form textarea {
+  font-family: "${actualMessageFontFamily}" !important;
+}
+        `);
+    }
+    
     const finalCss = [
         '/*',
         ' * === FONT DEFINITIONS ===',
@@ -452,9 +516,26 @@ function getCurrentPresetUIFont() {
     return null;
 }
 
+// 현재 프리셋의 메시지 폰트 가져오기
+function getCurrentPresetMessageFont() {
+    const currentPresetId = settings?.currentPreset;
+    if (currentPresetId) {
+        const presets = settings?.presets || [];
+        const preset = presets.find(p => p.id === currentPresetId);
+        return preset?.messageFont || null;
+    }
+    return null;
+}
+
 // UI 폰트 임시 적용
 function applyTempUIFont(fontName) {
     tempUiFont = fontName;
+    updateUIFont();
+}
+
+// 메시지 폰트 임시 적용
+function applyTempMessageFont(fontName) {
+    tempMessageFont = fontName;
     updateUIFont();
 }
 
@@ -466,7 +547,7 @@ function setupEventListeners(template) {
         if (presetId) {
             selectedPresetId = presetId;
             
-            // 선택된 프리셋의 UI 폰트 즉시 적용
+            // 선택된 프리셋의 폰트들 즉시 적용
             const presets = settings?.presets || [];
             const currentPreset = presets.find(p => p.id === presetId);
             if (currentPreset && currentPreset.uiFont) {
@@ -474,8 +555,14 @@ function setupEventListeners(template) {
             } else {
                 applyTempUIFont(null); // 기본 폰트
             }
+            if (currentPreset && currentPreset.messageFont) {
+                applyTempMessageFont(currentPreset.messageFont);
+            } else {
+                applyTempMessageFont(null); // 기본 폰트
+            }
             
             renderUIFontSection(template);
+            renderMessageFontSection(template);
             setupEventListeners(template);
         }
     });
@@ -523,7 +610,8 @@ function setupEventListeners(template) {
             const newPreset = {
                 id: generateId(),
                 name: presetName,
-                uiFont: null
+                uiFont: null,
+                messageFont: null
             };
             
                          // 프리셋 추가
@@ -533,6 +621,7 @@ function setupEventListeners(template) {
             
             renderPresetDropdown(template);
             renderUIFontSection(template);
+            renderMessageFontSection(template);
             setupEventListeners(template);
         }
     });
@@ -544,6 +633,16 @@ function setupEventListeners(template) {
             applyTempUIFont(fontName);
         } else {
             applyTempUIFont(null); // 기본 폰트
+        }
+    });
+    
+    // 메시지 폰트 드롭다운 변경 이벤트
+    template.find('#message-font-dropdown').off('change').on('change', function() {
+        const fontName = $(this).val();
+        if (fontName) {
+            applyTempMessageFont(fontName);
+        } else {
+            applyTempMessageFont(null); // 기본 폰트
         }
     });
     
@@ -563,6 +662,7 @@ function setupEventListeners(template) {
         if (success) {
             template.find('#font-source-textarea').val('');
             renderUIFontSection(template);
+            renderMessageFontSection(template);
             renderFontList(template);
             setupEventListeners(template);
         }
@@ -587,6 +687,7 @@ function saveCurrentPreset() {
     const preset = presets.find(p => p.id === selectedPresetId);
     if (preset) {
         preset.uiFont = tempUiFont;
+        preset.messageFont = tempMessageFont;
         
         // 현재 프리셋으로 설정
         settings.currentPreset = selectedPresetId;
@@ -619,9 +720,10 @@ function deletePreset(template, presetId) {
         }
         
         // UI 업데이트
-        renderPresetDropdown(template);
-        renderUIFontSection(template);
-        setupEventListeners(template);
+                     renderPresetDropdown(template);
+             renderUIFontSection(template);
+             renderMessageFontSection(template);
+             setupEventListeners(template);
         
         saveSettingsDebounced();
         updateUIFont();
@@ -641,6 +743,7 @@ function deleteFont(template, fontId) {
         
         // UI 업데이트
         renderUIFontSection(template);
+        renderMessageFontSection(template);
         renderFontList(template);
         setupEventListeners(template);
         

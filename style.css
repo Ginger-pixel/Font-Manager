@@ -57,7 +57,8 @@
 }
 
 /* UI 폰트 섹션 */
-.ui-font-section {
+.ui-font-section,
+.message-font-section {
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
@@ -65,19 +66,22 @@
     background-color: var(--black30a);
 }
 
-.ui-font-section h3 {
+.ui-font-section h3,
+.message-font-section h3 {
     margin: 0 0 10px 0;
     color: var(--SmartThemeBodyColor);
     font-size: calc(var(--mainFontSize) * 1.1);
 }
 
-.ui-font-selector {
+.ui-font-selector,
+.message-font-selector {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.ui-font-dropdown {
+.ui-font-dropdown,
+.message-font-dropdown {
     flex: 1;
     padding: 8px 12px;
     border: 1px solid var(--SmartThemeBorderColor);
@@ -89,7 +93,8 @@
     transition: all 0.2s ease;
 }
 
-.ui-font-dropdown:focus {
+.ui-font-dropdown:focus,
+.message-font-dropdown:focus {
     outline: none;
     border-color: var(--SmartThemeQuoteColor);
     box-shadow: 0 0 0 2px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
@@ -339,7 +344,8 @@
         margin-left: 0;
     }
     
-    .ui-font-selector {
+    .ui-font-selector,
+    .message-font-selector {
         flex-direction: column;
         align-items: stretch;
     }
