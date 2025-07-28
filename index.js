@@ -664,7 +664,7 @@ function updateUIFont() {
 html body,
 html body input,
 html body select,
-html body span,
+html body span:not([class*="fa"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd),
 html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
@@ -675,6 +675,12 @@ html body textarea:not(#send_textarea) {
   line-height: 1.1rem !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
+
+/* FontAwesome 아이콘 보호 */
+.fa, .fas, .far, .fab, .fal, .fad, .fass, .fasr, .fasl, .fasd,
+[class*="fa-"], i[class*="fa"] {
+  font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
+}
         `);
     } else {
         // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
@@ -683,7 +689,7 @@ html body textarea:not(#send_textarea) {
 html body,
 html body input,
 html body select,
-html body span,
+html body span:not([class*="fa"]):not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd),
 html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
@@ -691,6 +697,12 @@ html body textarea:not(#send_textarea) {
   font-family: initial !important;
   font-size: var(--font-manager-ui-size) !important;
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+}
+
+/* FontAwesome 아이콘 보호 */
+.fa, .fas, .far, .fab, .fal, .fad, .fass, .fasr, .fasl, .fasd,
+[class*="fa-"], i[class*="fa"] {
+  font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
 }
         `);
     }
@@ -710,7 +722,7 @@ html body textarea:not(#send_textarea) {
     if (currentMessageFontName && actualMessageFontFamily) {
         uiFontCss.push(`
 /* MESSAGE FONT APPLICATION - Font Manager Override */
-.mes * {
+.mes *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([class*="fa-"]):not(i[class*="fa"]) {
   font-family: "${actualMessageFontFamily}" !important;
   font-size: var(--font-manager-chat-size) !important;
   line-height: var(--font-manager-chat-line-height) !important;
@@ -721,13 +733,19 @@ html body textarea:not(#send_textarea) {
   font-family: "${actualMessageFontFamily}" !important;
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
+}
+
+/* 메시지 영역 FontAwesome 아이콘 보호 */
+.mes .fa, .mes .fas, .mes .far, .mes .fab, .mes .fal, .mes .fad, .mes .fass, .mes .fasr, .mes .fasl, .mes .fasd,
+.mes [class*="fa-"], .mes i[class*="fa"] {
+  font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
 }
         `);
     } else {
         // 기본 폰트일 때 font-family를 명시적으로 초기화하고 조절값은 적용
         uiFontCss.push(`
 /* MESSAGE FONT SIZE/WEIGHT APPLICATION - Font Manager Override (Default Font) */
-.mes * {
+.mes *:not(.fa):not(.fas):not(.far):not(.fab):not(.fal):not(.fad):not(.fass):not(.fasr):not(.fasl):not(.fasd):not([class*="fa-"]):not(i[class*="fa"]) {
   font-family: initial !important;
   font-size: var(--font-manager-chat-size) !important;
   line-height: var(--font-manager-chat-line-height) !important;
@@ -738,6 +756,12 @@ html body textarea:not(#send_textarea) {
   font-family: initial !important;
   font-size: var(--font-manager-input-size) !important;
   -webkit-text-stroke: var(--font-manager-chat-weight) !important;
+}
+
+/* 메시지 영역 FontAwesome 아이콘 보호 (기본 폰트) */
+.mes .fa, .mes .fas, .mes .far, .mes .fab, .mes .fal, .mes .fad, .mes .fass, .mes .fasr, .mes .fasl, .mes .fasd,
+.mes [class*="fa-"], .mes i[class*="fa"] {
+  font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
 }
         `);
     }
