@@ -370,9 +370,82 @@ function checkAndApplyAutoPreset() {
             })
         };
         
-        console.log(`[Font-Manager] 디버그 정보:`);
+        // 실제 스타일 내용 분석
+        const styleAnalysis = {
+            totalStyleTags: document.getElementsByTagName('style').length,
+            themeRelatedContent: [],
+            powerUserAttempts: {}
+        };
+
+        // 모든 스타일 태그에서 테마 관련 키워드 찾기
+        Array.from(document.getElementsByTagName('style')).forEach((style, index) => {
+            const content = style.textContent || '';
+            const lines = content.split('\n').slice(0, 10); // 처음 10줄만
+            
+            if (content.toLowerCase().includes('yebin') || 
+                content.toLowerCase().includes('amber') ||
+                content.toLowerCase().includes('theme')) {
+                styleAnalysis.themeRelatedContent.push({
+                    styleIndex: index,
+                    hasYebin: content.toLowerCase().includes('yebin'),
+                    hasAmber: content.toLowerCase().includes('amber'),
+                    hasTheme: content.toLowerCase().includes('theme'),
+                    firstLines: lines,
+                    totalLength: content.length
+                });
+            }
+        });
+
+        // power_user 객체 접근 시도 (다양한 방법)
+        try {
+            // 방법 1: 직접 전역 변수
+            if (typeof window.power_user !== 'undefined') {
+                styleAnalysis.powerUserAttempts.windowPowerUser = window.power_user.theme || 'undefined';
+            }
+            
+            // 방법 2: SillyTavern 객체를 통해
+            if (typeof window.SillyTavern !== 'undefined' && window.SillyTavern.getContext) {
+                const ctx = window.SillyTavern.getContext();
+                styleAnalysis.powerUserAttempts.sillyTavernContext = ctx?.power_user?.theme || 'undefined';
+            }
+            
+            // 방법 3: 전역에서 직접 찾기
+            for (const key in window) {
+                if (key.includes('power') || key.includes('user') || key.includes('theme')) {
+                    const obj = window[key];
+                    if (obj && typeof obj === 'object' && obj.theme) {
+                        styleAnalysis.powerUserAttempts[`window.${key}`] = obj.theme;
+                    }
+                }
+            }
+            
+            // 방법 4: localStorage에서 더 자세히 찾기
+            const powerUserKeys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('power') || key.includes('user') || key.includes('theme'))) {
+                    powerUserKeys.push(key);
+                    try {
+                        const value = localStorage.getItem(key);
+                        const parsed = JSON.parse(value);
+                        if (parsed && parsed.theme) {
+                            styleAnalysis.powerUserAttempts[`localStorage.${key}`] = parsed.theme;
+                        }
+                    } catch (e) {
+                        // JSON 파싱 실패는 무시
+                    }
+                }
+            }
+            styleAnalysis.powerUserAttempts.localStorageKeys = powerUserKeys;
+
+        } catch (error) {
+            styleAnalysis.powerUserAttempts.error = error.message;
+        }
+
+        console.log(`[Font-Manager] 🔍 상세 디버깅 정보:`);
         console.log(`- SillyTavern 현재 테마: "${currentTheme}"`);
         console.log(`- 추가 테마 정보:`, additionalThemeInfo);
+        console.log(`- 스타일 분석:`, styleAnalysis);
         console.log(`- Body 클래스:`, currentBodyClasses);
         console.log(`- HTML 클래스:`, currentHtmlClasses);
         console.log(`- CSS 파일들 (처음 10개):`, activeStylesheetHrefs.slice(0, 10));
@@ -388,10 +461,24 @@ function checkAndApplyAutoPreset() {
             console.log(`[Font-Manager] 테마 '${themeId}' 검사 중...`);
 
             try {
-                // 1. 스타일 태그 내용에서 테마 이름 검색
+                // 1. 스타일 태그 내용에서 테마 이름 검색 (개선된 버전)
                 if (allStyleTagContent.toLowerCase().includes(themeId.toLowerCase())) {
                     conditionMet = true;
                     console.log(`[Font-Manager] ✓ 스타일 내용에서 테마 '${themeId}' 감지됨`);
+                } else {
+                    // 더 정확한 스타일 분석
+                    if (styleAnalysis && styleAnalysis.themeRelatedContent) {
+                        const matchingStyles = styleAnalysis.themeRelatedContent.filter(style => {
+                            if (themeId.toLowerCase() === 'yebin') return style.hasYebin;
+                            if (themeId.toLowerCase() === 'amber') return style.hasAmber;
+                            return false;
+                        });
+                        
+                        if (matchingStyles.length > 0) {
+                            conditionMet = true;
+                            console.log(`[Font-Manager] ✓ 스타일 분석에서 테마 '${themeId}' 감지됨:`, matchingStyles.map(s => s.styleIndex));
+                        }
+                    }
                 }
 
                 // 2. CSS 파일 경로에서 테마 이름 검색 (강화된 버전)
@@ -432,10 +519,20 @@ function checkAndApplyAutoPreset() {
                     console.log(`[Font-Manager] ✓ html 클래스에서 테마 '${themeId}' 감지됨`);
                 }
 
-                // 5. SillyTavern의 power_user.theme과 비교
+                // 5. SillyTavern의 power_user.theme과 비교 (다중 방법)
                 if (!conditionMet && currentTheme && currentTheme.toLowerCase() === themeId.toLowerCase()) {
                     conditionMet = true;
                     console.log(`[Font-Manager] ✓ SillyTavern 설정에서 테마 '${themeId}' 감지됨`);
+                } else if (!conditionMet && styleAnalysis && styleAnalysis.powerUserAttempts) {
+                    // 다양한 방법으로 찾은 power_user 정보 확인
+                    for (const [method, theme] of Object.entries(styleAnalysis.powerUserAttempts)) {
+                        if (theme && typeof theme === 'string' && 
+                            theme.toLowerCase() === themeId.toLowerCase()) {
+                            conditionMet = true;
+                            console.log(`[Font-Manager] ✓ ${method}에서 테마 '${themeId}' 감지됨: ${theme}`);
+                            break;
+                        }
+                    }
                 }
 
                 // 6. 추가 테마 정보에서 검색 (참고 스크립트 방식)
@@ -478,6 +575,67 @@ function checkAndApplyAutoPreset() {
                     if (themePattern.test(allStyleTagContent)) {
                         conditionMet = true;
                         console.log(`[Font-Manager] ✓ 스타일 패턴 매칭으로 테마 '${themeId}' 감지됨`);
+                    }
+                }
+
+                // 8. DOM 전체에서 테마 관련 속성 검색 (최후의 방법)
+                if (!conditionMet) {
+                    try {
+                        // data-* 속성에서 검색
+                        const elementsWithThemeData = document.querySelectorAll(`[data-theme*="${themeId}" i], [data-current-theme*="${themeId}" i], [data-selected-theme*="${themeId}" i]`);
+                        if (elementsWithThemeData.length > 0) {
+                            conditionMet = true;
+                            console.log(`[Font-Manager] ✓ DOM data 속성에서 테마 '${themeId}' 감지됨:`, elementsWithThemeData.length, '개 요소');
+                        }
+
+                        // 클래스명에서 더 유연한 검색
+                        if (!conditionMet) {
+                            const elementsWithThemeClass = document.querySelectorAll(`[class*="${themeId}" i]`);
+                            if (elementsWithThemeClass.length > 0) {
+                                // 실제로 테마와 관련된 클래스인지 확인
+                                const relevantElements = Array.from(elementsWithThemeClass).filter(el => {
+                                    const classList = Array.from(el.classList);
+                                    return classList.some(cls => 
+                                        cls.toLowerCase().includes(themeId.toLowerCase()) && 
+                                        (cls.toLowerCase().includes('theme') || 
+                                         cls.toLowerCase().includes('skin') ||
+                                         cls.toLowerCase().includes('style'))
+                                    );
+                                });
+                                
+                                if (relevantElements.length > 0) {
+                                    conditionMet = true;
+                                    console.log(`[Font-Manager] ✓ DOM 클래스에서 테마 '${themeId}' 감지됨:`, relevantElements.length, '개 요소');
+                                }
+                            }
+                        }
+
+                        // CSS 커스텀 속성(변수)에서 검색
+                        if (!conditionMet) {
+                            const rootStyle = getComputedStyle(document.documentElement);
+                            const themeVars = [];
+                            
+                            // 일반적인 테마 관련 CSS 변수명들
+                            const commonThemeVars = [
+                                '--theme', '--current-theme', '--selected-theme', 
+                                '--theme-name', '--active-theme', '--ui-theme'
+                            ];
+                            
+                            for (const varName of commonThemeVars) {
+                                const value = rootStyle.getPropertyValue(varName);
+                                if (value && value.toLowerCase().includes(themeId.toLowerCase())) {
+                                    themeVars.push(`${varName}: ${value}`);
+                                }
+                            }
+                            
+                            if (themeVars.length > 0) {
+                                conditionMet = true;
+                                console.log(`[Font-Manager] ✓ CSS 변수에서 테마 '${themeId}' 감지됨:`, themeVars);
+                            }
+                        }
+
+                    } catch (domError) {
+                        console.warn(`[Font-Manager] DOM 검색 중 오류 (테마: ${themeId}):`, domError);
                     }
                 }
 
