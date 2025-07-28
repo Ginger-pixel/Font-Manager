@@ -1013,6 +1013,7 @@ function updateUIFont() {
 html body,
 html body input,
 html body select,
+html body span:not(.mes_edit_buttons span):not(.mes_buttons span):not(.extraMesButtons span):not(.swipe_right):not(.swipe_left):not(.menu_button):not(.fa):not(.fas):not(.far):not(.fab),
 html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
@@ -1024,13 +1025,23 @@ html body textarea:not(#send_textarea) {
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
 
-/* UI FONT FOR SPANS - 챗 액션 버튼 제외 */
-html body span:not(.mes_edit_buttons *):not(.mes_buttons *):not(.extraMesButtons *):not(.swipe_right):not(.swipe_left):not(.menu_button) {
-  font-family: "${actualFontFamily}", Sans-Serif !important;
-  font-size: var(--font-manager-ui-size) !important;
-  font-weight: normal !important;
-  line-height: 1.1rem !important;
-  -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+/* 챗 액션 버튼들 보호 - Font Manager Override */
+.mes_edit_buttons,
+.mes_edit_buttons *,
+.mes_buttons,
+.mes_buttons *,
+.extraMesButtons,
+.extraMesButtons *,
+.swipe_right,
+.swipe_left,
+.menu_button,
+.menu_button *,
+.fa, .fas, .far, .fab,
+i[class*="fa-"] {
+  -webkit-text-stroke: initial !important;
+  font-weight: initial !important;
+  opacity: initial !important;
+  filter: initial !important;
 }
         `);
     } else {
@@ -1040,6 +1051,7 @@ html body span:not(.mes_edit_buttons *):not(.mes_buttons *):not(.extraMesButtons
 html body,
 html body input,
 html body select,
+html body span:not(.mes_edit_buttons span):not(.mes_buttons span):not(.extraMesButtons span):not(.swipe_right):not(.swipe_left):not(.menu_button):not(.fa):not(.fas):not(.far):not(.fab),
 html body code,
 html body .list-group-item,
 html body .ui-widget-content .ui-menu-item-wrapper,
@@ -1048,10 +1060,23 @@ html body textarea:not(#send_textarea) {
   -webkit-text-stroke: var(--font-manager-ui-weight) !important;
 }
 
-/* UI FONT SIZE/WEIGHT FOR SPANS - 챗 액션 버튼 제외 */
-html body span:not(.mes_edit_buttons *):not(.mes_buttons *):not(.extraMesButtons *):not(.swipe_right):not(.swipe_left):not(.menu_button) {
-  font-size: var(--font-manager-ui-size) !important;
-  -webkit-text-stroke: var(--font-manager-ui-weight) !important;
+/* 챗 액션 버튼들 보호 - Font Manager Override */
+.mes_edit_buttons,
+.mes_edit_buttons *,
+.mes_buttons,
+.mes_buttons *,
+.extraMesButtons,
+.extraMesButtons *,
+.swipe_right,
+.swipe_left,
+.menu_button,
+.menu_button *,
+.fa, .fas, .far, .fab,
+i[class*="fa-"] {
+  -webkit-text-stroke: initial !important;
+  font-weight: initial !important;
+  opacity: initial !important;
+  filter: initial !important;
 }
         `);
     }
@@ -1104,88 +1129,6 @@ html body span:not(.mes_edit_buttons *):not(.mes_buttons *):not(.extraMesButtons
     // 다국어 폰트 CSS 생성
     const multiLangCss = generateMultiLanguageFontCSS();
     
-    // 챗 액션 버튼 보호 CSS
-    const chatActionProtectionCss = `
-/* === 챗 액션 버튼 보호 - Font Manager Override 방지 === */
-html body .mes_edit_buttons,
-html body .mes_buttons,
-html body .extraMesButtons,
-html body .swipe_right,
-html body .swipe_left,
-html body .menu_button,
-html body .mes_edit_buttons .menu_button,
-html body .mes_buttons .menu_button,
-html body .extraMesButtons .menu_button {
-  font-family: inherit !important;
-  font-size: inherit !important;
-  font-weight: inherit !important;
-  line-height: inherit !important;
-  -webkit-text-stroke: 0px transparent !important;
-  opacity: inherit !important;
-  filter: inherit !important;
-  color: inherit !important;
-  visibility: visible !important;
-  display: inherit !important;
-}
-
-/* 챗 액션 버튼 내부 요소들도 보호 - 더 구체적인 선택자 */
-html body .mes_edit_buttons *,
-html body .mes_buttons *,
-html body .extraMesButtons *,
-html body .swipe_right *,
-html body .swipe_left *,
-html body .menu_button *,
-html body .mes_edit_buttons span,
-html body .mes_buttons span,
-html body .extraMesButtons span,
-html body .swipe_right span,
-html body .swipe_left span,
-html body .menu_button span {
-  font-family: inherit !important;
-  font-size: inherit !important;
-  font-weight: inherit !important;
-  line-height: inherit !important;
-  -webkit-text-stroke: 0px transparent !important;
-  opacity: inherit !important;
-  filter: inherit !important;
-  color: inherit !important;
-  visibility: visible !important;
-}
-
-/* 아이콘 폰트 보호 */
-html body .mes_edit_buttons i,
-html body .mes_buttons i,
-html body .extraMesButtons i,
-html body .swipe_right i,
-html body .swipe_left i,
-html body .menu_button i {
-  -webkit-text-stroke: 0px transparent !important;
-  opacity: inherit !important;
-  color: inherit !important;
-  visibility: visible !important;
-}
-
-/* 강제 가시성 복구 - 최후의 수단 */
-html body .mes_edit_buttons .menu_button:not([style*="display: none"]),
-html body .mes_buttons .menu_button:not([style*="display: none"]),
-html body .extraMesButtons .menu_button:not([style*="display: none"]) {
-  opacity: 0.7 !important;
-  color: var(--SmartThemeBodyColor, #ccc) !important;
-  -webkit-text-stroke: 0px !important;
-  text-stroke: 0px !important;
-  font-size: 12px !important;
-  visibility: visible !important;
-  display: inline-block !important;
-}
-
-/* 호버 시 더 선명하게 */
-html body .mes_edit_buttons .menu_button:hover,
-html body .mes_buttons .menu_button:hover,
-html body .extraMesButtons .menu_button:hover {
-  opacity: 1 !important;
-}
-    `;
-
     const finalCss = [
         '/*',
         ' * === CSS VARIABLES ===',
@@ -1201,11 +1144,6 @@ html body .extraMesButtons .menu_button:hover {
         ' * === UI FONT APPLICATION ===',
         ' */',
         uiFontCss.join('\n\n'),
-        '\n\n',
-        '/*',
-        ' * === CHAT ACTION BUTTON PROTECTION ===',
-        ' */',
-        chatActionProtectionCss,
         '\n\n',
         '/*',
         ' * === MULTILANG FONT CLASSES ===',
