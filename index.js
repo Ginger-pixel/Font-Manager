@@ -68,7 +68,8 @@ async function showPresetNamePopup(existingName = '') {
         
         // 중복 검사 (기존 프리셋 수정이 아닌 경우)
         if (!existingName) {
-            const existingPresets = extension_settings[extensionName].presets.map(p => p.name);
+            const presets = extension_settings[extensionName]?.presets || [];
+            const existingPresets = presets.map(p => p.name);
             if (existingPresets.includes(presetName)) {
                 alert('이미 존재하는 프리셋 이름입니다.\n다른 이름을 사용해주세요.');
                 continue;
@@ -112,7 +113,8 @@ async function showFontNamePopup(fontData) {
         }
         
         // 중복 검사
-        const existingFonts = extension_settings[extensionName].fonts.map(f => f.name);
+        const fonts = extension_settings[extensionName]?.fonts || [];
+        const existingFonts = fonts.map(f => f.name);
         if (existingFonts.includes(fontName)) {
             alert('이미 존재하는 폰트 이름입니다.\n다른 이름을 사용해주세요.');
             continue;
@@ -127,6 +129,13 @@ async function showFontNamePopup(fontData) {
             filename: fontData.filename || null
         };
         
+        // 설정이 존재하는지 확인하고 폰트 추가
+        if (!extension_settings[extensionName]) {
+            extension_settings[extensionName] = defaultSettings;
+        }
+        if (!extension_settings[extensionName].fonts) {
+            extension_settings[extensionName].fonts = [];
+        }
         extension_settings[extensionName].fonts.push(newFont);
         
         // 시스템에 즉시 적용
@@ -144,7 +153,7 @@ async function openFontManagementPopup() {
     const template = $(await renderExtensionTemplateAsync(`third-party/${extensionName}`, 'template'));
     
     // 첫 번째 프리셋을 기본 선택
-    const presets = extension_settings[extensionName].presets || [];
+    const presets = extension_settings[extensionName]?.presets || [];
     if (presets.length > 0 && !selectedPresetId) {
         selectedPresetId = presets[0].id;
     }
@@ -183,7 +192,7 @@ async function openFontManagementPopup() {
 
 // 프리셋 드롭다운 렌더링
 function renderPresetDropdown(template) {
-    const presets = extension_settings[extensionName].presets || [];
+    const presets = extension_settings[extensionName]?.presets || [];
     const dropdown = template.find('#preset-dropdown');
     
     dropdown.empty();
@@ -202,7 +211,7 @@ function renderPresetDropdown(template) {
 
 // UI 폰트 섹션 렌더링
 function renderUIFontSection(template) {
-    const fonts = extension_settings[extensionName].fonts || [];
+    const fonts = extension_settings[extensionName]?.fonts || [];
     const dropdown = template.find('#ui-font-dropdown');
     
     dropdown.empty();
@@ -215,7 +224,8 @@ function renderUIFontSection(template) {
     
     // 현재 프리셋의 UI 폰트 설정
     if (selectedPresetId && !tempUiFont) {
-        const currentPreset = extension_settings[extensionName].presets.find(p => p.id === selectedPresetId);
+        const presets = extension_settings[extensionName]?.presets || [];
+        const currentPreset = presets.find(p => p.id === selectedPresetId);
         if (currentPreset && currentPreset.uiFont) {
             dropdown.val(currentPreset.uiFont);
         }
@@ -243,7 +253,7 @@ function renderFontAddArea(template) {
 
 // 폰트 리스트 렌더링
 function renderFontList(template) {
-    const fonts = extension_settings[extensionName].fonts || [];
+    const fonts = extension_settings[extensionName]?.fonts || [];
     const listArea = template.find('#font-list-area');
     
     let listHtml = '<h3 class="font-list-title">불러온 폰트 목록</h3>';
@@ -371,7 +381,8 @@ function setupEventListeners(template) {
             return;
         }
         
-        const currentPreset = extension_settings[extensionName].presets.find(p => p.id === selectedPresetId);
+                 const presets = extension_settings[extensionName]?.presets || [];
+         const currentPreset = presets.find(p => p.id === selectedPresetId);
         const newName = await showPresetNamePopup(currentPreset.name);
         
         if (newName) {
@@ -399,6 +410,13 @@ function setupEventListeners(template) {
                 uiFont: null
             };
             
+            // 설정이 존재하는지 확인하고 프리셋 추가
+            if (!extension_settings[extensionName]) {
+                extension_settings[extensionName] = defaultSettings;
+            }
+            if (!extension_settings[extensionName].presets) {
+                extension_settings[extensionName].presets = [];
+            }
             extension_settings[extensionName].presets.push(newPreset);
             selectedPresetId = newPreset.id;
             saveSettingsDebounced();
@@ -486,7 +504,8 @@ function setupEventListeners(template) {
 function saveCurrentPreset() {
     if (!selectedPresetId) return;
     
-    const preset = extension_settings[extensionName].presets.find(p => p.id === selectedPresetId);
+    const presets = extension_settings[extensionName]?.presets || [];
+    const preset = presets.find(p => p.id === selectedPresetId);
     if (preset) {
         preset.uiFont = tempUiFont;
         saveSettingsDebounced();
@@ -505,6 +524,8 @@ function saveCurrentPreset() {
 
 // 프리셋 삭제
 function deletePreset(template, presetId) {
+    if (!extension_settings[extensionName]?.presets) return;
+    
     const presets = extension_settings[extensionName].presets;
     const presetIndex = presets.findIndex(p => p.id === presetId);
     
@@ -529,6 +550,8 @@ function deletePreset(template, presetId) {
 
 // 폰트 삭제
 function deleteFont(template, fontId) {
+    if (!extension_settings[extensionName]?.fonts) return;
+    
     const fonts = extension_settings[extensionName].fonts;
     const fontIndex = fonts.findIndex(f => f.id === fontId);
     
@@ -651,7 +674,7 @@ function removeFontFromSystem(font) {
 
 // 모든 폰트 업데이트 (초기 로드용)
 function updateAllFonts() {
-    const fonts = extension_settings[extensionName].fonts || [];
+    const fonts = extension_settings[extensionName]?.fonts || [];
     
     // 각 폰트를 시스템에 적용
     fonts.forEach(font => {
@@ -659,9 +682,10 @@ function updateAllFonts() {
     });
     
     // 현재 프리셋의 UI 폰트 적용
-    const currentPreset = extension_settings[extensionName].currentPreset;
+    const currentPreset = extension_settings[extensionName]?.currentPreset;
     if (currentPreset) {
-        const preset = extension_settings[extensionName].presets.find(p => p.id === currentPreset);
+        const presets = extension_settings[extensionName]?.presets || [];
+        const preset = presets.find(p => p.id === currentPreset);
         if (preset) {
             applyPresetUIFont(preset);
         }
