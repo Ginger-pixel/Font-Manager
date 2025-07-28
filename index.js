@@ -264,9 +264,11 @@ const debouncedCheckAndApplyAutoPreset = debounce(checkAndApplyAutoPreset, 300);
 // 자동 프리셋 적용 체크 및 실행
 function checkAndApplyAutoPreset() {
     if (!settings?.themeBindings || settings.themeBindings.length === 0) {
-        // console.log('[Font-Manager] 설정된 테마 연동이 없습니다.');
+        console.log('[Font-Manager] 설정된 테마 연동이 없습니다.');
         return;
     }
+
+    console.log(`[Font-Manager] 자동 프리셋 체크 시작 - ${settings.themeBindings.length}개 바인딩 확인`);
 
     try {
         // 현재 페이지의 모든 스타일 태그 내용 수집
@@ -282,46 +284,61 @@ function checkAndApplyAutoPreset() {
         const currentBodyClasses = Array.from(document.body.classList);
         const currentHtmlClasses = Array.from(document.documentElement.classList);
 
+        // SillyTavern 현재 테마 가져오기
+        const currentTheme = getCurrentTheme();
+        
+        console.log(`[Font-Manager] 디버그 정보:`);
+        console.log(`- SillyTavern 현재 테마: "${currentTheme}"`);
+        console.log(`- Body 클래스:`, currentBodyClasses);
+        console.log(`- HTML 클래스:`, currentHtmlClasses);
+        console.log(`- CSS 파일들:`, activeStylesheetHrefs);
+        console.log(`- 등록된 테마 바인딩:`, settings.themeBindings.map(b => `"${b.themeId}" -> ${b.presetId}`));
+
         let matchedBinding = null;
 
         // 각 테마 바인딩을 확인
         for (const binding of settings.themeBindings) {
             const themeId = binding.themeId;
             let conditionMet = false;
+            
+            console.log(`[Font-Manager] 테마 '${themeId}' 검사 중...`);
 
             try {
                 // 1. 스타일 태그 내용에서 테마 이름 검색
                 if (allStyleTagContent.toLowerCase().includes(themeId.toLowerCase())) {
                     conditionMet = true;
-                    console.log(`[Font-Manager] 스타일 내용에서 테마 '${themeId}' 감지됨`);
+                    console.log(`[Font-Manager] ✓ 스타일 내용에서 테마 '${themeId}' 감지됨`);
                 }
 
                 // 2. CSS 파일 경로에서 테마 이름 검색
                 if (!conditionMet && activeStylesheetHrefs.some(href => 
                     href.toLowerCase().includes(themeId.toLowerCase()))) {
                     conditionMet = true;
-                    console.log(`[Font-Manager] CSS 파일 경로에서 테마 '${themeId}' 감지됨`);
+                    console.log(`[Font-Manager] ✓ CSS 파일 경로에서 테마 '${themeId}' 감지됨`);
                 }
 
                 // 3. body 클래스에서 테마 이름 검색
                 if (!conditionMet && currentBodyClasses.some(className => 
                     className.toLowerCase().includes(themeId.toLowerCase()))) {
                     conditionMet = true;
-                    console.log(`[Font-Manager] body 클래스에서 테마 '${themeId}' 감지됨`);
+                    console.log(`[Font-Manager] ✓ body 클래스에서 테마 '${themeId}' 감지됨`);
                 }
 
                 // 4. html 클래스에서 테마 이름 검색
                 if (!conditionMet && currentHtmlClasses.some(className => 
                     className.toLowerCase().includes(themeId.toLowerCase()))) {
                     conditionMet = true;
-                    console.log(`[Font-Manager] html 클래스에서 테마 '${themeId}' 감지됨`);
+                    console.log(`[Font-Manager] ✓ html 클래스에서 테마 '${themeId}' 감지됨`);
                 }
 
                 // 5. SillyTavern의 power_user.theme과 비교
-                const currentTheme = getCurrentTheme();
                 if (!conditionMet && currentTheme && currentTheme.toLowerCase() === themeId.toLowerCase()) {
                     conditionMet = true;
-                    console.log(`[Font-Manager] SillyTavern 설정에서 테마 '${themeId}' 감지됨`);
+                    console.log(`[Font-Manager] ✓ SillyTavern 설정에서 테마 '${themeId}' 감지됨`);
+                }
+
+                if (!conditionMet) {
+                    console.log(`[Font-Manager] ✗ 테마 '${themeId}' 매칭되지 않음`);
                 }
 
             } catch (error) {
@@ -331,14 +348,17 @@ function checkAndApplyAutoPreset() {
 
             if (conditionMet) {
                 matchedBinding = binding;
-                console.log(`[Font-Manager] 테마 연동 매칭됨: '${themeId}' -> 프리셋 '${binding.presetId}'`);
+                console.log(`[Font-Manager] 🎯 테마 연동 매칭됨: '${themeId}' -> 프리셋 '${binding.presetId}'`);
                 break;
             }
         }
 
         // 매칭된 바인딩이 있으면 프리셋 적용
         if (matchedBinding) {
+            console.log(`[Font-Manager] 프리셋 적용 시도: ${matchedBinding.presetId}`);
             applyPresetByTheme(matchedBinding.presetId);
+        } else {
+            console.log(`[Font-Manager] 💔 매칭되는 테마 바인딩이 없습니다.`);
         }
 
     } catch (error) {
@@ -1562,6 +1582,31 @@ function setupEventListeners(template) {
         renderThemeBindingSection(template);
         debouncedCheckAndApplyAutoPreset(); // 테마 체크도 다시 실행
         console.log('[Font-Manager] 테마 정보 새로고침됨');
+    });
+    
+    // 테마 감지 테스트 버튼
+    template.find('#test-theme-detection-btn').off('click').on('click', function() {
+        console.log('='.repeat(50));
+        console.log('[Font-Manager] 🔍 수동 테마 감지 테스트 시작');
+        console.log('='.repeat(50));
+        
+        // 상세 정보 수집 및 출력
+        const themeInfo = getDetectedThemeInfo();
+        console.log('[Font-Manager] 📊 감지된 테마 정보:');
+        console.log('- SillyTavern 테마:', themeInfo.sillyTavernTheme);
+        console.log('- 감지된 스타일 키워드:', themeInfo.detectedInStyles);
+        console.log('- 테마 관련 CSS 파일:', themeInfo.detectedInHrefs);
+        console.log('- Body 클래스:', themeInfo.bodyClasses);
+        console.log('- HTML 클래스:', themeInfo.htmlClasses);
+        
+        // 자동 프리셋 체크 실행
+        checkAndApplyAutoPreset();
+        
+        console.log('='.repeat(50));
+        console.log('[Font-Manager] 🔍 테마 감지 테스트 완료');
+        console.log('='.repeat(50));
+        
+        alert('테마 감지 테스트가 완료되었습니다.\n결과는 브라우저 콘솔(F12)에서 확인하세요.');
     });
 }
 
