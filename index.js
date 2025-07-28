@@ -33,6 +33,9 @@ let tempMessageFont = null;
 let originalUIStyles = null;
 let fontStyle = null;
 let settings = null;
+// 기본 폰트 명시적 선택 플래그
+let isUIFontExplicitlyDefault = false;
+let isMessageFontExplicitlyDefault = false;
 // 임시 조절값들
 let tempUiFontSize = null;
 let tempUiFontWeight = null;
@@ -263,6 +266,8 @@ async function openFontManagementPopup() {
         restoreOriginalUIStyles();
         tempUiFont = null;
         tempMessageFont = null;
+        isUIFontExplicitlyDefault = false;
+        isMessageFontExplicitlyDefault = false;
         tempUiFontSize = null;
         tempUiFontWeight = null;
         tempChatFontSize = null;
@@ -273,6 +278,9 @@ async function openFontManagementPopup() {
     
     // 임시 변수 초기화
     tempUiFont = null;
+    tempMessageFont = null;
+    isUIFontExplicitlyDefault = false;
+    isMessageFontExplicitlyDefault = false;
     tempUiFontSize = null;
     tempUiFontWeight = null;
     tempChatFontSize = null;
@@ -574,6 +582,8 @@ function saveOriginalUIStyles() {
     originalUIStyles = {
         tempUiFont: tempUiFont,
         tempMessageFont: tempMessageFont,
+        isUIFontExplicitlyDefault: isUIFontExplicitlyDefault,
+        isMessageFontExplicitlyDefault: isMessageFontExplicitlyDefault,
         tempUiFontSize: tempUiFontSize,
         tempUiFontWeight: tempUiFontWeight,
         tempChatFontSize: tempChatFontSize,
@@ -589,6 +599,8 @@ function restoreOriginalUIStyles() {
     if (originalUIStyles) {
         tempUiFont = originalUIStyles.tempUiFont;
         tempMessageFont = originalUIStyles.tempMessageFont;
+        isUIFontExplicitlyDefault = originalUIStyles.isUIFontExplicitlyDefault || false;
+        isMessageFontExplicitlyDefault = originalUIStyles.isMessageFontExplicitlyDefault || false;
         tempUiFontSize = originalUIStyles.tempUiFontSize;
         tempUiFontWeight = originalUIStyles.tempUiFontWeight;
         tempChatFontSize = originalUIStyles.tempChatFontSize;
@@ -598,6 +610,8 @@ function restoreOriginalUIStyles() {
     } else {
         tempUiFont = null;
         tempMessageFont = null;
+        isUIFontExplicitlyDefault = false;
+        isMessageFontExplicitlyDefault = false;
         tempUiFontSize = null;
         tempUiFontWeight = null;
         tempChatFontSize = null;
@@ -697,9 +711,9 @@ function updateUIFont() {
         }
     });
     
-    // 현재 UI 폰트 적용
-    const currentFontName = tempUiFont || getCurrentPresetUIFont();
-    console.log('[Font-Manager] UI 폰트 적용:', currentFontName);
+    // 현재 UI 폰트 적용 (명시적 기본 폰트 선택 시 프리셋 무시)
+    const currentFontName = isUIFontExplicitlyDefault ? null : (tempUiFont || getCurrentPresetUIFont());
+    console.log('[Font-Manager] UI 폰트 적용:', currentFontName, '(명시적 기본:', isUIFontExplicitlyDefault + ')');
     
     // 실제 사용할 font-family 이름 찾기
     let actualFontFamily = currentFontName;
@@ -747,9 +761,9 @@ html body textarea:not(#send_textarea) {
         `);
     }
     
-    // 현재 메시지 폰트 적용
-    const currentMessageFontName = tempMessageFont || getCurrentPresetMessageFont();
-    console.log('[Font-Manager] 메시지 폰트 적용:', currentMessageFontName);
+    // 현재 메시지 폰트 적용 (명시적 기본 폰트 선택 시 프리셋 무시)
+    const currentMessageFontName = isMessageFontExplicitlyDefault ? null : (tempMessageFont || getCurrentPresetMessageFont());
+    console.log('[Font-Manager] 메시지 폰트 적용:', currentMessageFontName, '(명시적 기본:', isMessageFontExplicitlyDefault + ')');
     
     // 실제 사용할 메시지 font-family 이름 찾기
     let actualMessageFontFamily = currentMessageFontName;
@@ -904,6 +918,7 @@ function getCurrentPresetChatLineHeight() {
 function applyTempUIFont(fontName) {
     console.log('[Font-Manager] UI 폰트 변경:', fontName);
     tempUiFont = fontName;
+    isUIFontExplicitlyDefault = false; // 사용자 정의 폰트 선택 시 기본 폰트 플래그 해제
     updateUIFont();
 }
 
@@ -911,6 +926,7 @@ function applyTempUIFont(fontName) {
 function applyTempMessageFont(fontName) {
     console.log('[Font-Manager] 메시지 폰트 변경:', fontName);
     tempMessageFont = fontName;
+    isMessageFontExplicitlyDefault = false; // 사용자 정의 폰트 선택 시 기본 폰트 플래그 해제
     updateUIFont();
 }
 
@@ -960,6 +976,10 @@ function setupEventListeners(template) {
         const presetId = $(this).val();
         if (presetId) {
             selectedPresetId = presetId;
+            
+            // 프리셋 변경 시 명시적 기본 폰트 플래그 리셋
+            isUIFontExplicitlyDefault = false;
+            isMessageFontExplicitlyDefault = false;
             
             // 선택된 프리셋의 폰트들과 조절값들 즉시 적용
             const presets = settings?.presets || [];
@@ -1056,10 +1076,12 @@ function setupEventListeners(template) {
         const fontName = $(this).val();
         console.log('[Font-Manager] UI 폰트 드롭다운 변경:', fontName);
         if (fontName && fontName !== "") {
+            isUIFontExplicitlyDefault = false;
             applyTempUIFont(fontName);
         } else {
-            // 기본 폰트 선택 - 명시적으로 null 설정하고 즉시 업데이트
+            // 기본 폰트 선택 - 명시적으로 기본 폰트 플래그 설정
             console.log('[Font-Manager] UI 기본 폰트 선택');
+            isUIFontExplicitlyDefault = true;
             tempUiFont = null;
             updateUIFont();
         }
@@ -1070,10 +1092,12 @@ function setupEventListeners(template) {
         const fontName = $(this).val();
         console.log('[Font-Manager] 메시지 폰트 드롭다운 변경:', fontName);
         if (fontName && fontName !== "") {
+            isMessageFontExplicitlyDefault = false;
             applyTempMessageFont(fontName);
         } else {
-            // 기본 폰트 선택 - 명시적으로 null 설정하고 즉시 업데이트
+            // 기본 폰트 선택 - 명시적으로 기본 폰트 플래그 설정
             console.log('[Font-Manager] 메시지 기본 폰트 선택');
+            isMessageFontExplicitlyDefault = true;
             tempMessageFont = null;
             updateUIFont();
         }
