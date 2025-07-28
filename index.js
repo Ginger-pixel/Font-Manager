@@ -25,14 +25,6 @@ const defaultSettings = {
     inputFontSize: 14,
     chatFontWeight: 0,
     chatLineHeight: 1.2,
-    // 다국어 폰트 설정들
-    multilangEnabled: false,
-    multilangFonts: {
-        en: null,    // 영어
-        ko: null,    // 한국어
-        ja: null,    // 일본어
-        zh: null     // 중국어
-    },
     // 테마 연동 규칙들
     themeRules: []
 };
@@ -54,9 +46,6 @@ let tempChatFontSize = null;
 let tempInputFontSize = null;
 let tempChatFontWeight = null;
 let tempChatLineHeight = null;
-// 임시 다국어 설정들
-let tempMultilangEnabled = null;
-let tempMultilangFonts = null;
 
 // 설정 초기화
 function initSettings() {
@@ -81,14 +70,6 @@ function initSettings() {
     settings.inputFontSize = settings.inputFontSize ?? 14;
     settings.chatFontWeight = settings.chatFontWeight ?? 0;
     settings.chatLineHeight = settings.chatLineHeight ?? 1.2;
-    // 다국어 설정 기본값 보장
-    settings.multilangEnabled = settings.multilangEnabled ?? false;
-    settings.multilangFonts = settings.multilangFonts ?? {
-        en: null,
-        ko: null,
-        ja: null,
-        zh: null
-    };
     
     // 기본 프리셋이 없으면 생성
     if (settings.presets.length === 0) {
@@ -251,16 +232,12 @@ async function openFontManagementPopup() {
     tempInputFontSize = settings.inputFontSize;
     tempChatFontWeight = settings.chatFontWeight;
     tempChatLineHeight = settings.chatLineHeight;
-    // 다국어 설정 초기화
-    tempMultilangEnabled = settings.multilangEnabled;
-    tempMultilangFonts = { ...settings.multilangFonts };
     
     // 모든 영역 렌더링
     renderPresetDropdown(template);
     renderToggleSection(template);
     renderUIFontSection(template);
     renderMessageFontSection(template);
-    renderMultilangFontSection(template);
     renderThemeLinkingSection(template);
     renderFontAddArea(template);
     renderFontList(template);
@@ -294,8 +271,6 @@ async function openFontManagementPopup() {
         tempInputFontSize = null;
         tempChatFontWeight = null;
         tempChatLineHeight = null;
-        tempMultilangEnabled = null;
-        tempMultilangFonts = null;
     }
     
     // 임시 변수 초기화
@@ -309,8 +284,6 @@ async function openFontManagementPopup() {
     tempInputFontSize = null;
     tempChatFontWeight = null;
     tempChatLineHeight = null;
-    tempMultilangEnabled = null;
-    tempMultilangFonts = null;
 }
 
 // 프리셋 드롭다운 렌더링
@@ -345,8 +318,7 @@ function renderToggleSection(template) {
 function updateSectionsState(template, enabled) {
     const sections = [
         '#ui-font-section',
-        '#message-font-section',
-        '#multilang-font-section',
+        '#message-font-section', 
         '#theme-linking-section',
         '#font-add-area',
         '#font-list-area'
@@ -404,61 +376,6 @@ function renderUIFontSection(template) {
     template.find('#ui-font-size-value').text(uiFontSize + 'px');
     template.find('#ui-font-weight-slider').val(uiFontWeight);
     template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1) + 'px');
-}
-
-// 다국어 폰트 섹션 렌더링
-function renderMultilangFontSection(template) {
-    const fonts = settings?.fonts || [];
-    
-    // 다국어 활성화 체크박스
-    const multilangEnabledCheckbox = template.find('#multilang-enabled-toggle');
-    const isMultilangEnabled = tempMultilangEnabled ?? settings.multilangEnabled;
-    multilangEnabledCheckbox.prop('checked', isMultilangEnabled);
-    
-    // 다국어 폰트 드롭다운들
-    const languages = {
-        'en': '영어',
-        'ko': '한국어', 
-        'ja': '일본어',
-        'zh': '중국어'
-    };
-    
-    const currentMultilangFonts = tempMultilangFonts ?? settings.multilangFonts;
-    
-    Object.keys(languages).forEach(langCode => {
-        const dropdown = template.find(`#multilang-font-${langCode}`);
-        
-        dropdown.empty();
-        dropdown.append('<option value="">기본 폰트</option>');
-        
-        fonts.forEach(font => {
-            const isSelected = currentMultilangFonts[langCode] === font.name;
-            dropdown.append(`<option value="${font.name}" ${isSelected ? 'selected' : ''}>${font.name}</option>`);
-        });
-        
-        // 현재 설정된 폰트 선택
-        if (currentMultilangFonts[langCode]) {
-            dropdown.val(currentMultilangFonts[langCode]);
-        } else {
-            dropdown.val("");
-        }
-    });
-    
-    // 다국어 활성화 상태에 따라 드롭다운들 활성화/비활성화
-    updateMultilangDropdownsState(template, isMultilangEnabled);
-}
-
-// 다국어 드롭다운들의 활성화 상태 업데이트
-function updateMultilangDropdownsState(template, enabled) {
-    const dropdowns = template.find('[id^="multilang-font-"]');
-    dropdowns.prop('disabled', !enabled);
-    
-    const multilangSection = template.find('#multilang-font-section');
-    if (enabled) {
-        multilangSection.removeClass('disabled-multilang');
-    } else {
-        multilangSection.addClass('disabled-multilang');
-    }
 }
 
 // 메시지 폰트 섹션 렌더링
@@ -607,9 +524,7 @@ function saveOriginalUIStyles() {
         tempChatFontSize: tempChatFontSize,
         tempInputFontSize: tempInputFontSize,
         tempChatFontWeight: tempChatFontWeight,
-        tempChatLineHeight: tempChatLineHeight,
-        tempMultilangEnabled: tempMultilangEnabled,
-        tempMultilangFonts: tempMultilangFonts ? { ...tempMultilangFonts } : null
+        tempChatLineHeight: tempChatLineHeight
     };
 }
 
@@ -627,8 +542,6 @@ function restoreOriginalUIStyles() {
         tempInputFontSize = originalUIStyles.tempInputFontSize;
         tempChatFontWeight = originalUIStyles.tempChatFontWeight;
         tempChatLineHeight = originalUIStyles.tempChatLineHeight;
-        tempMultilangEnabled = originalUIStyles.tempMultilangEnabled;
-        tempMultilangFonts = originalUIStyles.tempMultilangFonts ? { ...originalUIStyles.tempMultilangFonts } : null;
     } else {
         tempUiFont = null;
         tempMessageFont = null;
@@ -640,8 +553,6 @@ function restoreOriginalUIStyles() {
         tempInputFontSize = null;
         tempChatFontWeight = null;
         tempChatLineHeight = null;
-        tempMultilangEnabled = null;
-        tempMultilangFonts = null;
     }
     updateUIFont();
 }
@@ -659,78 +570,6 @@ function extractFontFamilyFromCSS(css) {
         console.warn('[Font-Manager] font-family 추출 실패:', error);
     }
     return null;
-}
-
-// 유니코드 범위 기반 CSS로 처리하므로 언어 감지 함수 불필요
-
-// 가벼운 다국어 폰트 CSS 생성 함수 (유니코드 범위 기반)
-function generateMultilangFontCSS() {
-    const multilangEnabled = tempMultilangEnabled ?? settings.multilangEnabled;
-    const multilangFonts = tempMultilangFonts ?? settings.multilangFonts;
-    
-    if (!multilangEnabled || !multilangFonts) {
-        return '';
-    }
-    
-    const fonts = settings?.fonts || [];
-    const cssRules = [];
-    
-    // 유니코드 범위를 직접 CSS로 적용 (DOM 조작 없이)
-    const unicodeRanges = {
-        ko: 'U+AC00-D7AF, U+1100-11FF, U+3130-318F', // 한국어
-        ja: 'U+3040-309F, U+30A0-30FF, U+4E00-9FAF', // 일본어  
-        zh: 'U+4E00-9FFF, U+3400-4DBF',              // 중국어
-        en: 'U+0020-007F, U+00A0-00FF'               // 영어(라틴)
-    };
-    
-    Object.keys(multilangFonts).forEach(langCode => {
-        const fontName = multilangFonts[langCode];
-        if (!fontName || !unicodeRanges[langCode]) return;
-        
-        const selectedFont = fonts.find(font => font.name === fontName);
-        if (!selectedFont) return;
-        
-        const actualFontFamily = selectedFont.fontFamily || fontName;
-        
-        // @font-face 규칙으로 유니코드 범위 지정
-        cssRules.push(`
-/* MULTILANG FONT - ${langCode.toUpperCase()} (Unicode Range) */
-@font-face {
-  font-family: "font-manager-${langCode}";
-  src: local("${actualFontFamily}");
-  unicode-range: ${unicodeRanges[langCode]};
-}
-        `);
-    });
-    
-    // 다국어 폰트를 기존 메시지 폰트와 함께 적용
-    if (cssRules.length > 0) {
-        const fontStack = Object.keys(multilangFonts)
-            .filter(lang => multilangFonts[lang])
-            .map(lang => `"font-manager-${lang}"`)
-            .join(', ');
-        
-        // 기존 메시지 폰트 설정 존재 확인
-        const currentMessageFontName = isMessageFontExplicitlyDefault ? null : (tempMessageFont ?? settings.currentMessageFont);
-        const fonts = settings?.fonts || [];
-        let baseFontFamily = 'inherit';
-        
-        if (currentMessageFontName) {
-            const selectedFont = fonts.find(font => font.name === currentMessageFontName);
-            if (selectedFont) {
-                baseFontFamily = `"${selectedFont.fontFamily || currentMessageFontName}"`;
-            }
-        }
-            
-        cssRules.push(`
-/* MULTILANG FONT APPLICATION (with base font fallback) */
-.mes * {
-  font-family: ${fontStack}, ${baseFontFamily} !important;
-}
-        `);
-    }
-    
-    return cssRules.join('\n');
 }
 
 // CSS 검증 및 정리
@@ -903,9 +742,6 @@ html body textarea:not(#send_textarea) {
         `);
     }
     
-    // 다국어 폰트 CSS 생성
-    const multilangCss = generateMultilangFontCSS();
-    
     const finalCss = [
         '/*',
         ' * === CSS VARIABLES ===',
@@ -920,12 +756,7 @@ html body textarea:not(#send_textarea) {
         '/*',
         ' * === UI FONT APPLICATION ===',
         ' */',
-        uiFontCss.join('\n\n'),
-        '\n\n',
-        '/*',
-        ' * === MULTILANG FONT APPLICATION ===',
-        ' */',
-        multilangCss
+        uiFontCss.join('\n\n')
     ].join('\n');
     
     const sanitizedCss = sanitize(finalCss);
@@ -1107,7 +938,6 @@ function setupEventListeners(template) {
             
             renderUIFontSection(template);
             renderMessageFontSection(template);
-            renderMultilangFontSection(template);
             setupEventListeners(template);
             updateUIFont(); // 조절값 변경사항 즉시 적용
         }
@@ -1257,7 +1087,6 @@ function setupEventListeners(template) {
             template.find('#font-source-textarea').val('');
             renderUIFontSection(template);
             renderMessageFontSection(template);
-            renderMultilangFontSection(template);
             renderThemeLinkingSection(template);
             renderFontList(template);
             setupEventListeners(template);
@@ -1272,26 +1101,6 @@ function setupEventListeners(template) {
         if (confirm('이 폰트를 삭제하시겠습니까?')) {
             deleteFont(template, fontId);
         }
-    });
-    
-    // 다국어 활성화 토글 이벤트
-    template.find('#multilang-enabled-toggle').off('change').on('change', function() {
-        tempMultilangEnabled = $(this).prop('checked');
-        updateMultilangDropdownsState(template, tempMultilangEnabled);
-        updateUIFont(); // 다국어 설정 변경 시 폰트 업데이트
-    });
-    
-    // 다국어 폰트 드롭다운 이벤트들
-    const languages = ['en', 'ko', 'ja', 'zh'];
-    languages.forEach(langCode => {
-        template.find(`#multilang-font-${langCode}`).off('change').on('change', function() {
-            const fontName = $(this).val();
-            if (!tempMultilangFonts) {
-                tempMultilangFonts = { ...settings.multilangFonts };
-            }
-            tempMultilangFonts[langCode] = fontName || null;
-            updateUIFont(); // 다국어 폰트 변경 시 폰트 업데이트
-        });
     });
     
     // UI 폰트 기본값 버튼 이벤트
@@ -1421,14 +1230,6 @@ function saveCurrentSettingsToGlobal() {
     settings.currentUiFont = tempUiFont;
     settings.currentMessageFont = tempMessageFont;
     
-    // 다국어 설정 저장
-    if (tempMultilangEnabled !== null) {
-        settings.multilangEnabled = tempMultilangEnabled;
-    }
-    if (tempMultilangFonts !== null) {
-        settings.multilangFonts = { ...tempMultilangFonts };
-    }
-    
     // 현재 임시값들을 전역 설정에 저장
     if (tempUiFontSize !== null) {
         settings.uiFontSize = tempUiFontSize;
@@ -1476,13 +1277,6 @@ function saveCurrentPreset() {
         // 전역 설정에도 저장
         settings.currentUiFont = tempUiFont;
         settings.currentMessageFont = tempMessageFont;
-        // 다국어 설정도 전역에 저장
-        if (tempMultilangEnabled !== null) {
-            settings.multilangEnabled = tempMultilangEnabled;
-        }
-        if (tempMultilangFonts !== null) {
-            settings.multilangFonts = { ...tempMultilangFonts };
-        }
         if (tempUiFontSize !== null) {
             settings.uiFontSize = tempUiFontSize;
         }
@@ -1536,7 +1330,6 @@ function deletePreset(template, presetId) {
         renderPresetDropdown(template);
         renderUIFontSection(template);
         renderMessageFontSection(template);
-        renderMultilangFontSection(template);
         renderThemeLinkingSection(template);
         setupEventListeners(template);
         
@@ -1559,7 +1352,6 @@ function deleteFont(template, fontId) {
         // UI 업데이트
         renderUIFontSection(template);
         renderMessageFontSection(template);
-        renderMultilangFontSection(template);
         renderThemeLinkingSection(template);
         renderFontList(template);
         setupEventListeners(template);
@@ -1569,23 +1361,11 @@ function deleteFont(template, fontId) {
     }
 }
 
-// 기존 메시지 관찰자 정리 (유니코드 범위 기반으로 더 이상 불필요)
-let messageObserver = null;
-
-function cleanupMessageObserver() {
-    if (messageObserver) {
-        messageObserver.disconnect();
-        messageObserver = null;
-    }
-}
-
 // 모든 폰트 업데이트 (초기 로드용)  
 function updateAllFonts() {
     updateUIFont();
     // 테마 자동 감지 시작
     startThemeDetection();
-    // 기존 메시지 관찰자 정리 (유니코드 범위 기반으로 더 이상 불필요)
-    cleanupMessageObserver();
 }
 
 // 테마 감지 및 자동 프리셋 적용 시작
