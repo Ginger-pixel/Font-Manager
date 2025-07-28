@@ -230,6 +230,8 @@ async function openFontManagementPopup() {
     const result = await popup.show();
     
     if (result) {
+        // 저장 버튼을 눌렀을 때 - 현재 설정값들을 전역 설정에 저장
+        saveCurrentSettingsToGlobal();
         console.log("폰트 설정이 저장되었습니다.");
     } else {
         // 취소 시 원본 스타일 복원
@@ -991,6 +993,35 @@ function setupEventListeners(template) {
             deleteFont(template, fontId);
         }
     });
+}
+
+// 현재 설정값들을 전역 설정에 저장 (팝업 저장 버튼용)
+function saveCurrentSettingsToGlobal() {
+    // 현재 임시값들을 전역 설정에 저장
+    if (tempUiFontSize !== null) {
+        settings.uiFontSize = tempUiFontSize;
+    }
+    if (tempUiFontWeight !== null) {
+        settings.uiFontWeight = tempUiFontWeight;
+    }
+    if (tempChatFontSize !== null) {
+        settings.chatFontSize = tempChatFontSize;
+    }
+    if (tempInputFontSize !== null) {
+        settings.inputFontSize = tempInputFontSize;
+    }
+    if (tempChatFontWeight !== null) {
+        settings.chatFontWeight = tempChatFontWeight;
+    }
+    if (tempChatLineHeight !== null) {
+        settings.chatLineHeight = tempChatLineHeight;
+    }
+    
+    // 설정 저장
+    saveSettingsDebounced();
+    
+    // UI 업데이트 (현재 적용된 스타일 유지)
+    updateUIFont();
 }
 
 // 현재 프리셋 저장
