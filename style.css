@@ -195,36 +195,53 @@
     gap: 5px;
 }
 
-.color-picker {
+.color-picker-button {
     width: 35px;
     height: 26px;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 3px;
-    background: none;
+    background: #ffffff;
     cursor: pointer;
-    padding: 0;
     transition: all 0.2s ease;
+    position: relative;
 }
 
-.color-picker:hover {
+.color-picker-button:hover {
     border-color: var(--SmartThemeQuoteColor);
     transform: scale(1.05);
 }
 
-.color-picker::-webkit-color-swatch-wrapper {
-    padding: 0;
-    border: none;
+.color-picker-button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    background: inherit;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 2px;
+    transform: translate(-50%, -50%);
 }
 
-.color-picker::-webkit-color-swatch {
-    border: none;
-    border-radius: 2px;
+/* Vanilla Picker 스타일 오버라이드 */
+.picker_wrapper {
+    z-index: 10000 !important;
+}
+
+.picker_sl {
+    border-radius: 4px !important;
+}
+
+.picker_hue {
+    border-radius: 4px !important;
 }
 
 .color-hash {
     color: var(--SmartThemeBodyColor);
-    font-size: calc(var(--mainFontSize) * 0.9);
+    font-size: calc(var(--mainFontSize) * 0.8);
     font-weight: 600;
+    min-width: 12px;
 }
 
 .color-input {
@@ -517,13 +534,18 @@
         font-size: calc(var(--mainFontSize) * 0.8);
     }
     
-    .color-picker {
+    .color-picker-button {
         width: 30px;
         height: 22px;
     }
     
+    .color-hash {
+        font-size: calc(var(--mainFontSize) * 0.75);
+        min-width: 10px;
+    }
+    
     .color-input {
-        width: 60px;
+        width: 80px;
         font-size: calc(var(--mainFontSize) * 0.8);
     }
 }
@@ -562,13 +584,18 @@
         gap: 3px;
     }
     
-    .color-picker {
+    .color-picker-button {
         width: 25px;
         height: 20px;
     }
     
+    .color-hash {
+        font-size: calc(var(--mainFontSize) * 0.7);
+        min-width: 8px;
+    }
+    
     .color-input {
-        width: 50px;
+        width: 70px;
         font-size: calc(var(--mainFontSize) * 0.75);
         padding: 4px 6px;
     }

@@ -6,6 +6,28 @@ import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.j
 import { ARGUMENT_TYPE, SlashCommandNamedArgument } from "../../../slash-commands/SlashCommandArgument.js";
 import { POPUP_RESULT, POPUP_TYPE, Popup } from "../../../popup.js";
 
+// Vanilla Picker 라이브러리 로드
+let Picker;
+async function loadColorPicker() {
+    if (!Picker) {
+        try {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/vanilla-picker@2.12.3/dist/vanilla-picker.min.js';
+            document.head.appendChild(script);
+            
+            await new Promise((resolve, reject) => {
+                script.onload = () => {
+                    Picker = window.Picker;
+                    resolve();
+                };
+                script.onerror = reject;
+            });
+        } catch (error) {
+            console.warn('[Font-Manager] 컬러 피커 로드 실패:', error);
+        }
+    }
+}
+
 // 확장 설정
 const extensionName = "Font-Manager";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
@@ -42,6 +64,8 @@ let tempChatFontSize = null;
 let tempInputFontSize = null;
 let tempChatFontWeight = null;
 let tempChatLineHeight = null;
+// 컬러 피커 인스턴스
+let uiColorPicker = null;
 
 // 설정 초기화
 function initSettings() {
@@ -90,17 +114,50 @@ function validateColorInput(inputElement) {
     }
 }
 
-// 컬러 피커와 텍스트 입력 동기화
-function syncColorInputs(template, hexColor, updatePicker = true, updateText = true) {
-    const colorPicker = template.find('#ui-font-color-picker');
+// 컬러 피커 초기화
+function initColorPicker(template) {
+    if (!Picker) return;
+    
+    const pickerButton = template.find('#ui-font-color-picker')[0];
     const colorInput = template.find('#ui-font-color-input');
     
-    if (updatePicker) {
-        if (hexColor) {
-            colorPicker.val('#' + hexColor);
-        } else {
-            colorPicker.val('#ffffff'); // 기본값
+    if (uiColorPicker) {
+        uiColorPicker.destroy();
+        uiColorPicker = null;
+    }
+    
+    // 현재 색상 값 가져오기
+    const currentColor = tempUiFontColor || '';
+    const fullColor = currentColor ? (currentColor.startsWith('#') ? currentColor : '#' + currentColor) : '#ffffff';
+    
+    uiColorPicker = new Picker({
+        parent: pickerButton,
+        popup: 'top',
+        color: fullColor,
+        onChange: function(color) {
+            const hex = color.hex.substring(1); // # 제거
+            colorInput.val(hex);
+            validateColorInput(colorInput);
+            applyTempUIFontColor(hex);
+            
+            // 피커 버튼 색상 업데이트
+            pickerButton.style.backgroundColor = color.hex;
         }
+    });
+    
+    // 초기 버튼 색상 설정
+    pickerButton.style.backgroundColor = fullColor;
+}
+
+// 컬러 피커와 텍스트 입력 동기화
+function syncColorInputs(template, hexColor, updatePicker = true, updateText = true) {
+    const pickerButton = template.find('#ui-font-color-picker')[0];
+    const colorInput = template.find('#ui-font-color-input');
+    
+    if (updatePicker && uiColorPicker) {
+        const color = hexColor ? '#' + hexColor : '#ffffff';
+        uiColorPicker.setColor(color);
+        pickerButton.style.backgroundColor = color;
     }
     
     if (updateText) {
@@ -223,6 +280,9 @@ async function showFontNamePopup(fontData) {
 
 // 폰트 관리 창 열기
 async function openFontManagementPopup() {
+    // 컬러 피커 라이브러리 로드
+    await loadColorPicker();
+    
     const template = $(await renderExtensionTemplateAsync(`third-party/${extensionName}`, 'template'));
     
     // 저장된 현재 프리셋이 있으면 선택, 없으면 첫 번째 프리셋 선택
@@ -264,6 +324,9 @@ async function openFontManagementPopup() {
     renderFontAddArea(template);
     renderFontList(template);
     
+    // 컬러 피커 초기화
+    initColorPicker(template);
+    
     // 이벤트 리스너 추가
     setupEventListeners(template);
     
@@ -292,6 +355,12 @@ async function openFontManagementPopup() {
         tempInputFontSize = null;
         tempChatFontWeight = null;
         tempChatLineHeight = null;
+    }
+    
+    // 컬러 피커 정리
+    if (uiColorPicker) {
+        uiColorPicker.destroy();
+        uiColorPicker = null;
     }
     
     // 임시 변수 초기화
@@ -971,6 +1040,7 @@ function setupEventListeners(template) {
             
             renderUIFontSection(template);
             renderMessageFontSection(template);
+            initColorPicker(template); // 컬러 피커 재초기화
             setupEventListeners(template);
             updateUIFont(); // 조절값 변경사항 즉시 적용
         }
@@ -1031,6 +1101,7 @@ function setupEventListeners(template) {
             renderPresetDropdown(template);
             renderUIFontSection(template);
             renderMessageFontSection(template);
+            initColorPicker(template); // 컬러 피커 재초기화
             setupEventListeners(template);
         }
     });
@@ -1068,20 +1139,14 @@ function setupEventListeners(template) {
         applyTempUIFontWeight(weight);
     });
     
-    // UI 폰트 컬러 피커 이벤트
-    template.find('#ui-font-color-picker').off('input').on('input', function() {
-        const hexColor = $(this).val().substring(1); // # 제거
-        syncColorInputs(template, hexColor, false, true); // 텍스트만 업데이트
-        applyTempUIFontColor(hexColor);
-    });
-    
     // UI 폰트 색상 텍스트 입력 이벤트
     template.find('#ui-font-color-input').off('input').on('input', function() {
         const color = $(this).val().trim();
         validateColorInput($(this));
         if (isValidHexColor(color)) {
-            if (color) {
-                template.find('#ui-font-color-picker').val('#' + color);
+            if (color && uiColorPicker) {
+                uiColorPicker.setColor('#' + color);
+                template.find('#ui-font-color-picker')[0].style.backgroundColor = '#' + color;
             }
             applyTempUIFontColor(color);
         }
@@ -1130,6 +1195,7 @@ function setupEventListeners(template) {
             renderUIFontSection(template);
             renderMessageFontSection(template);
             renderFontList(template);
+            initColorPicker(template); // 컬러 피커 재초기화
             setupEventListeners(template);
         }
     });
@@ -1230,6 +1296,7 @@ function deletePreset(template, presetId) {
                      renderPresetDropdown(template);
              renderUIFontSection(template);
              renderMessageFontSection(template);
+             initColorPicker(template); // 컬러 피커 재초기화
              setupEventListeners(template);
         
         saveSettingsDebounced();
@@ -1252,6 +1319,7 @@ function deleteFont(template, fontId) {
         renderUIFontSection(template);
         renderMessageFontSection(template);
         renderFontList(template);
+        initColorPicker(template); // 컬러 피커 재초기화
         setupEventListeners(template);
         
         saveSettingsDebounced();
