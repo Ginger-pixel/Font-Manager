@@ -4,7 +4,10 @@
 .font-manager-main-container {
     max-height: 70vh;
     overflow-y: auto;
+    overflow-x: hidden;
     padding-right: 5px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* 프리셋 드롭다운과 버튼 행 */
@@ -13,6 +16,9 @@
     align-items: center;
     gap: 10px;
     margin-bottom: 15px;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
 /* 프리셋 드롭다운 */
@@ -36,18 +42,20 @@
 
 /* 프리셋 관리 버튼들 */
 .preset-btn {
-    padding: 8px 12px;
+    padding: 8px 10px;
     background-color: var(--SmartThemeBlurTintColor);
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     color: var(--SmartThemeQuoteColor);
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 16px;
-    min-width: 40px;
+    font-size: 14px;
+    min-width: 36px;
+    max-width: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .preset-btn:hover {
@@ -59,10 +67,13 @@
 /* UI 폰트 섹션 */
 .ui-font-section,
 .message-font-section {
+    border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
     margin-bottom: 15px;
     background-color: var(--black30a);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .ui-font-section h3,
@@ -117,10 +128,12 @@
 }
 
 .font-control-row label {
-    min-width: 70px;
+    min-width: 60px;
+    max-width: 80px;
     color: var(--SmartThemeBodyColor);
     font-size: calc(var(--mainFontSize) * 0.9);
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 /* 조절바 스타일 */
@@ -175,23 +188,31 @@
 
 /* 값 표시 */
 .font-control-row span {
-    min-width: 60px;
+    min-width: 50px;
+    max-width: 70px;
     text-align: right;
     color: var(--SmartThemeQuoteColor);
     font-size: calc(var(--mainFontSize) * 0.85);
     font-weight: 600;
     background-color: var(--black50a);
-    padding: 4px 8px;
+    padding: 4px 6px;
     border-radius: 3px;
     border: 1px solid var(--SmartThemeBorderColor);
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* 폰트 추가 영역 */
 .font-add-area {
+    border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
     margin-bottom: 15px;
     background-color: var(--black30a);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .font-add-section {
@@ -211,6 +232,7 @@
 .font-source-textarea {
     width: 100%;
     min-height: 100px;
+    max-width: 100%;
     padding: 10px;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
@@ -221,6 +243,7 @@
     resize: vertical;
     box-sizing: border-box;
     margin-bottom: 10px;
+    overflow-x: auto;
 }
 
 .font-source-textarea:focus {
@@ -253,12 +276,16 @@
 
 /* 폰트 리스트 영역 */
 .font-list-area {
+    border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 5px;
     padding: 15px;
     background-color: var(--black30a);
     overflow-y: auto;
+    overflow-x: hidden;
     min-height: 150px;
     max-height: 200px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .font-list-title {
@@ -415,7 +442,15 @@
 /* 반응형 디자인 */
 @media (max-width: 600px) {
     .preset-selector-row {
-        gap: 8px;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    
+    .preset-btn {
+        min-width: 32px;
+        max-width: 45px;
+        padding: 6px 8px;
+        font-size: 12px;
     }
     
     .font-item {
@@ -435,47 +470,67 @@
     }
     
     .font-control-row {
-        gap: 10px;
+        gap: 8px;
     }
     
     .font-control-row label {
-        min-width: 60px;
+        min-width: 50px;
+        max-width: 70px;
         font-size: calc(var(--mainFontSize) * 0.85);
     }
     
     .font-control-row span {
-        min-width: 50px;
+        min-width: 45px;
+        max-width: 60px;
         font-size: calc(var(--mainFontSize) * 0.8);
+        padding: 3px 5px;
     }
 }
 
 @media (max-width: 480px) {
     .preset-selector-row {
-        gap: 6px;
+        gap: 4px;
         margin-bottom: 15px;
+        justify-content: space-between;
+    }
+    
+    .preset-dropdown {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .preset-btn {
+        min-width: 28px;
+        max-width: 40px;
+        padding: 5px 6px;
+        font-size: 11px;
     }
     
     .font-source-textarea {
         min-height: 80px;
+        padding: 8px;
     }
     
     .font-control-row {
-        gap: 8px;
+        gap: 6px;
         flex-wrap: wrap;
     }
     
     .font-control-row label {
-        min-width: 50px;
-        flex-basis: 100%;
-        margin-bottom: 5px;
+        min-width: 45px;
+        max-width: 60px;
+        flex-basis: auto;
+        margin-bottom: 0;
     }
     
     .font-control-row input[type="range"] {
         flex: 1;
-        min-width: 120px;
+        min-width: 100px;
     }
     
     .font-control-row span {
-        min-width: 45px;
+        min-width: 40px;
+        max-width: 55px;
+        padding: 3px 4px;
     }
 } 
