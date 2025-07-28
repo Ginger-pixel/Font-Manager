@@ -165,7 +165,6 @@
     padding: 15px;
     background-color: var(--black30a);
     overflow-y: auto;
-    min-height: 200px;
 }
 
 .font-list-title {

@@ -143,8 +143,6 @@ async function showFontNamePopup(fontData) {
         
         saveSettingsDebounced();
         success = true;
-        
-        console.log(`폰트 '${newFont.name}' 추가 완료. 현재 폰트 개수:`, extension_settings[extensionName].fonts.length);
     }
     
     return true;
@@ -258,8 +256,6 @@ function renderFontList(template) {
     const fonts = extension_settings[extensionName]?.fonts || [];
     const listArea = template.find('#font-list-area');
     
-    console.log('폰트 리스트 렌더링 - 폰트 개수:', fonts.length, fonts);
-    
     let listHtml = '<h3 class="font-list-title">불러온 폰트 목록</h3>';
     
     if (fonts.length === 0) {
@@ -284,17 +280,6 @@ function renderFontList(template) {
     }
     
     listArea.html(listHtml);
-}
-
-// 전체 UI 새로고침
-function refreshAllUI(template) {
-    console.log('전체 UI 새로고침 시작');
-    renderPresetDropdown(template);
-    renderUIFontSection(template);
-    renderFontAddArea(template);
-    renderFontList(template);
-    setupEventListeners(template);
-    console.log('전체 UI 새로고침 완료');
 }
 
 // 원본 UI 스타일 저장
@@ -374,7 +359,8 @@ function setupEventListeners(template) {
         const presetId = $(this).val();
         if (presetId) {
             selectedPresetId = presetId;
-            refreshAllUI(template);
+            renderUIFontSection(template);
+            setupEventListeners(template);
         }
     });
     
@@ -402,7 +388,8 @@ function setupEventListeners(template) {
         if (newName) {
             currentPreset.name = newName;
             saveSettingsDebounced();
-            refreshAllUI(template);
+            renderPresetDropdown(template);
+            setupEventListeners(template);
         }
     });
     
@@ -434,7 +421,9 @@ function setupEventListeners(template) {
             selectedPresetId = newPreset.id;
             saveSettingsDebounced();
             
-            refreshAllUI(template);
+            renderPresetDropdown(template);
+            renderUIFontSection(template);
+            setupEventListeners(template);
         }
     });
     
@@ -458,12 +447,10 @@ function setupEventListeners(template) {
         });
         
         if (success) {
-            console.log('폰트 소스코드 추가 성공, UI 새로고침 시작');
             template.find('#font-source-textarea').val('');
-            // 전체 UI 다시 렌더링
-            refreshAllUI(template);
-        } else {
-            console.log('폰트 소스코드 추가 실패 또는 취소');
+            renderUIFontSection(template);
+            renderFontList(template);
+            setupEventListeners(template);
         }
     });
     
@@ -493,12 +480,10 @@ function setupEventListeners(template) {
             });
             
             if (success) {
-                console.log('폰트 파일 추가 성공, UI 새로고침 시작');
                 $(this).val('');
-                // 전체 UI 다시 렌더링
-                refreshAllUI(template);
-            } else {
-                console.log('폰트 파일 추가 실패 또는 취소');
+                renderUIFontSection(template);
+                renderFontList(template);
+                setupEventListeners(template);
             }
         } catch (error) {
             console.error('폰트 파일 로드 오류:', error);
@@ -511,8 +496,6 @@ function setupEventListeners(template) {
         const fontId = $(this).data('id');
         if (confirm('이 폰트를 삭제하시겠습니까?')) {
             deleteFont(template, fontId);
-            // 삭제 후 전체 UI 새로고침
-            refreshAllUI(template);
         }
     });
 }
@@ -557,7 +540,9 @@ function deletePreset(template, presetId) {
         }
         
         // UI 업데이트
-        refreshAllUI(template);
+        renderPresetDropdown(template);
+        renderUIFontSection(template);
+        setupEventListeners(template);
         
         saveSettingsDebounced();
     }
@@ -576,6 +561,11 @@ function deleteFont(template, fontId) {
         
         // 배열에서 제거
         fonts.splice(fontIndex, 1);
+        
+        // UI 업데이트
+        renderUIFontSection(template);
+        renderFontList(template);
+        setupEventListeners(template);
         
         saveSettingsDebounced();
     }
