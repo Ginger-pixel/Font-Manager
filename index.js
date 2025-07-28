@@ -825,10 +825,42 @@ function generateMultiLanguageFontCSS() {
 /* ${lang.toUpperCase()} FONT - Font Manager Multilang */
 .font-manager-${lang} {
     font-family: "${actualFontFamily}" !important;
+    font-weight: inherit !important;
+    font-style: inherit !important;
+    -webkit-text-stroke: inherit !important;
+}
+
+/* 다국어 폰트 클래스 우선순위 강화 */
+.mes .font-manager-${lang},
+span.font-manager-${lang} {
+    font-family: "${actualFontFamily}" !important;
+    font-weight: inherit !important;
+    font-style: inherit !important;
+    -webkit-text-stroke: inherit !important;
 }
         `);
     });
     
+    // 모든 다국어 폰트 클래스에 대한 강력한 우선순위 CSS 추가
+    if (css.length > 0) {
+        css.push(`
+/* 다국어 폰트 최우선 적용 규칙 */
+.mes span[class*="font-manager-"]:not([class*="fa-"]),
+span[class*="font-manager-"]:not([class*="fa-"]),
+.font-manager-korean:not([class*="fa-"]),
+.font-manager-japanese:not([class*="fa-"]),
+.font-manager-chinese:not([class*="fa-"]),
+.font-manager-english:not([class*="fa-"]),
+.font-manager-emoji:not([class*="fa-"]) {
+    font-weight: inherit !important;
+    font-style: inherit !important;
+    -webkit-text-stroke: inherit !important;
+    text-rendering: auto !important;
+    font-variant: inherit !important;
+}
+        `);
+    }
+
     return css.join('\n');
 }
 
@@ -1036,15 +1068,30 @@ html body textarea:not(#send_textarea) {
 .swipe_left,
 .menu_button,
 .menu_button *,
-.fa, .fas, .far, .fab,
-i[class*="fa-"],
-[class*="fa-"],
-.mes .fa,
-.mes .fas,
-.mes .far,
-.mes .fab,
-.mes i[class*="fa-"],
-.mes [class*="fa-"] {
+.fa:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji), 
+.fas:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji), 
+.far:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji), 
+.fab:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji),
+i[class*="fa-"]:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji),
+[class*="fa-"]:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji),
+.mes_edit_buttons .fa,
+.mes_edit_buttons .fas,
+.mes_edit_buttons .far,
+.mes_edit_buttons .fab,
+.mes_buttons .fa,
+.mes_buttons .fas,
+.mes_buttons .far,
+.mes_buttons .fab,
+.extraMesButtons .fa,
+.extraMesButtons .fas,
+.extraMesButtons .far,
+.extraMesButtons .fab,
+.swipe_right .fa,
+.swipe_left .fa,
+.menu_button .fa,
+.menu_button .fas,
+.menu_button .far,
+.menu_button .fab {
   -webkit-text-stroke: 0px transparent !important;
   font-weight: 900 !important;
   opacity: 1 !important;
@@ -1089,15 +1136,30 @@ html body textarea:not(#send_textarea) {
 .swipe_left,
 .menu_button,
 .menu_button *,
-.fa, .fas, .far, .fab,
-i[class*="fa-"],
-[class*="fa-"],
-.mes .fa,
-.mes .fas,
-.mes .far,
-.mes .fab,
-.mes i[class*="fa-"],
-.mes [class*="fa-"] {
+.fa:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji), 
+.fas:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji), 
+.far:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji), 
+.fab:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji),
+i[class*="fa-"]:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji),
+[class*="fa-"]:not(.font-manager-korean):not(.font-manager-japanese):not(.font-manager-chinese):not(.font-manager-english):not(.font-manager-emoji),
+.mes_edit_buttons .fa,
+.mes_edit_buttons .fas,
+.mes_edit_buttons .far,
+.mes_edit_buttons .fab,
+.mes_buttons .fa,
+.mes_buttons .fas,
+.mes_buttons .far,
+.mes_buttons .fab,
+.extraMesButtons .fa,
+.extraMesButtons .fas,
+.extraMesButtons .far,
+.extraMesButtons .fab,
+.swipe_right .fa,
+.swipe_left .fa,
+.menu_button .fa,
+.menu_button .fas,
+.menu_button .far,
+.menu_button .fab {
   -webkit-text-stroke: 0px transparent !important;
   font-weight: 900 !important;
   opacity: 1 !important;
