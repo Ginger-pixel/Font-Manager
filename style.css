@@ -1,5 +1,39 @@
 /* Font-Manager 확장 스타일 - 폰트 관리 */
 
+/* UI 폰트 적용 스타일 */
+body,
+input,
+select,
+span,
+code,
+.list-group-item,
+.ui-widget-content .ui-menu-item-wrapper,
+textarea:not(#send_textarea) {
+  font-family: var(--ui-default-font), Sans-Serif !important;
+  font-weight: normal !important;
+  line-height: 1.1rem;
+  -webkit-text-stroke: var(--ui-font-weight);
+}
+
+*::before,
+i {
+  font-family: Sans-Serif, "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+.drawer-content,
+textarea,
+.drawer-icon {
+  border: 0;
+  color: var(--default-font-color) !important;
+}
+
+.interactable,
+.fa-solid {
+  transition: all 0.3s !important;
+}
+
 /* 메인 컨테이너 */
 .font-manager-main-container {
     max-height: 70vh;
