@@ -87,6 +87,46 @@ function getCurrentTheme() {
     return null;
 }
 
+// 현재 감지된 테마 정보 수집
+function getDetectedThemeInfo() {
+    const info = {
+        sillyTavernTheme: getCurrentTheme(),
+        detectedInStyles: [],
+        detectedInHrefs: [],
+        bodyClasses: Array.from(document.body.classList),
+        htmlClasses: Array.from(document.documentElement.classList)
+    };
+
+    try {
+        // 스타일 태그에서 테마 관련 내용 찾기
+        const allStyleContent = Array.from(document.getElementsByTagName('style'))
+            .map(style => style.textContent || '')
+            .join('\n');
+        
+        // 일반적인 테마 키워드 찾기
+        const themeKeywords = ['dark', 'light', 'theme', '테마', '주제', 'midnight', 'rose'];
+        themeKeywords.forEach(keyword => {
+            if (allStyleContent.toLowerCase().includes(keyword)) {
+                info.detectedInStyles.push(keyword);
+            }
+        });
+
+        // CSS 파일 href에서 테마 관련 내용 찾기
+        const styleLinks = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'));
+        styleLinks.forEach(link => {
+            const href = link.getAttribute('href') || '';
+            if (href && (href.includes('theme') || href.includes('dark') || href.includes('light'))) {
+                info.detectedInHrefs.push(href);
+            }
+        });
+
+    } catch (error) {
+        console.warn('[Font-Manager] 테마 정보 수집 실패:', error);
+    }
+
+    return info;
+}
+
 // 사용 가능한 테마 목록 가져오기 (추정)
 async function getAvailableThemes() {
     try {
@@ -110,33 +150,199 @@ async function getAvailableThemes() {
     return ['Default', 'Dark', 'Light', 'Midnight', 'Rose'];
 }
 
-// 테마 변경 이벤트 리스너 설정
+// 테마 변경 관찰자 설정 (MutationObserver 사용)
+let themeChangeObserver = null;
+
 function setupThemeChangeListener() {
     try {
-        const context = getSillyTavernContext();
-        if (context && context.eventSource && context.event_types) {
-            // 설정 변경 이벤트 리스닝
-            context.eventSource.on(context.event_types.SETTINGS_UPDATED, handleThemeChange);
-            console.log('[Font-Manager] 테마 변경 이벤트 리스너 등록됨');
+        // 기존 관찰자가 있으면 해제
+        if (themeChangeObserver) {
+            themeChangeObserver.disconnect();
         }
+
+        // MutationObserver 설정
+        const observerConfig = {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['href', 'class', 'data-theme'],
+            characterData: true
+        };
+
+        themeChangeObserver = new MutationObserver(handleThemeChangeObservation);
+
+        // document head 관찰 (CSS 파일 변경 감지)
+        if (document.head) {
+            themeChangeObserver.observe(document.head, observerConfig);
+        }
+
+        // body 클래스 변경 감지
+        if (document.body) {
+            themeChangeObserver.observe(document.body, { 
+                attributes: true, 
+                attributeFilter: ['class', 'data-theme'] 
+            });
+        }
+
+        // html 요소 클래스 변경 감지
+        if (document.documentElement) {
+            themeChangeObserver.observe(document.documentElement, { 
+                attributes: true, 
+                attributeFilter: ['class', 'data-theme'] 
+            });
+        }
+
+        console.log('[Font-Manager] 테마 변경 MutationObserver 설정됨');
+        
+        // 초기 검사 실행
+        debouncedCheckAndApplyAutoPreset();
+        
     } catch (error) {
-        console.warn('[Font-Manager] 테마 변경 이벤트 리스너 설정 실패:', error);
+        console.warn('[Font-Manager] 테마 변경 관찰자 설정 실패:', error);
+        // 폴백으로 기존 이벤트 리스너 사용
+        setupFallbackThemeListener();
     }
 }
 
-// 테마 변경 처리
-function handleThemeChange() {
+// 폴백 이벤트 리스너
+function setupFallbackThemeListener() {
     try {
-        const currentTheme = getCurrentTheme();
-        if (currentTheme) {
-            const binding = findThemeBinding(currentTheme);
-            if (binding && binding.presetId) {
-                applyPresetByTheme(binding.presetId);
-                console.log(`[Font-Manager] 테마 '${currentTheme}'에 연결된 프리셋 '${binding.presetId}' 자동 적용됨`);
-            }
+        const context = getSillyTavernContext();
+        if (context && context.eventSource && context.event_types) {
+            context.eventSource.on(context.event_types.SETTINGS_UPDATED, debouncedCheckAndApplyAutoPreset);
+            console.log('[Font-Manager] 폴백 테마 변경 이벤트 리스너 등록됨');
         }
     } catch (error) {
-        console.warn('[Font-Manager] 테마 변경 처리 실패:', error);
+        console.warn('[Font-Manager] 폴백 이벤트 리스너 설정 실패:', error);
+    }
+}
+
+// 디바운싱 함수
+function debounce(func, delay) {
+    let timeout;
+    return function (...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
+// MutationObserver 콜백
+function handleThemeChangeObservation(mutationsList, observer) {
+    let relevantChangeDetected = false;
+    
+    for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+            // CSS 파일이 추가/제거된 경우
+            const addedNodes = Array.from(mutation.addedNodes);
+            const removedNodes = Array.from(mutation.removedNodes);
+            
+            if (addedNodes.some(node => node.tagName === 'LINK' && node.rel === 'stylesheet') ||
+                removedNodes.some(node => node.tagName === 'LINK' && node.rel === 'stylesheet')) {
+                relevantChangeDetected = true;
+                break;
+            }
+        }
+        
+        if (mutation.type === 'attributes') {
+            if (['href', 'class', 'data-theme'].includes(mutation.attributeName)) {
+                relevantChangeDetected = true;
+                break;
+            }
+        }
+    }
+    
+    if (relevantChangeDetected) {
+        console.log('[Font-Manager] 테마 관련 변경 감지됨');
+        debouncedCheckAndApplyAutoPreset();
+    }
+}
+
+// 디바운스된 자동 프리셋 적용 함수
+const debouncedCheckAndApplyAutoPreset = debounce(checkAndApplyAutoPreset, 300);
+
+// 자동 프리셋 적용 체크 및 실행
+function checkAndApplyAutoPreset() {
+    if (!settings?.themeBindings || settings.themeBindings.length === 0) {
+        // console.log('[Font-Manager] 설정된 테마 연동이 없습니다.');
+        return;
+    }
+
+    try {
+        // 현재 페이지의 모든 스타일 태그 내용 수집
+        const allStyleTagContent = Array.from(document.getElementsByTagName('style'))
+            .map(style => style.textContent || '')
+            .join('\n');
+
+        // 현재 활성화된 CSS 파일 href 수집
+        const activeStylesheetHrefs = Array.from(document.querySelectorAll('link[rel="stylesheet"][href]'))
+            .map(link => link.getAttribute('href') || '');
+
+        // body와 html 클래스 수집
+        const currentBodyClasses = Array.from(document.body.classList);
+        const currentHtmlClasses = Array.from(document.documentElement.classList);
+
+        let matchedBinding = null;
+
+        // 각 테마 바인딩을 확인
+        for (const binding of settings.themeBindings) {
+            const themeId = binding.themeId;
+            let conditionMet = false;
+
+            try {
+                // 1. 스타일 태그 내용에서 테마 이름 검색
+                if (allStyleTagContent.toLowerCase().includes(themeId.toLowerCase())) {
+                    conditionMet = true;
+                    console.log(`[Font-Manager] 스타일 내용에서 테마 '${themeId}' 감지됨`);
+                }
+
+                // 2. CSS 파일 경로에서 테마 이름 검색
+                if (!conditionMet && activeStylesheetHrefs.some(href => 
+                    href.toLowerCase().includes(themeId.toLowerCase()))) {
+                    conditionMet = true;
+                    console.log(`[Font-Manager] CSS 파일 경로에서 테마 '${themeId}' 감지됨`);
+                }
+
+                // 3. body 클래스에서 테마 이름 검색
+                if (!conditionMet && currentBodyClasses.some(className => 
+                    className.toLowerCase().includes(themeId.toLowerCase()))) {
+                    conditionMet = true;
+                    console.log(`[Font-Manager] body 클래스에서 테마 '${themeId}' 감지됨`);
+                }
+
+                // 4. html 클래스에서 테마 이름 검색
+                if (!conditionMet && currentHtmlClasses.some(className => 
+                    className.toLowerCase().includes(themeId.toLowerCase()))) {
+                    conditionMet = true;
+                    console.log(`[Font-Manager] html 클래스에서 테마 '${themeId}' 감지됨`);
+                }
+
+                // 5. SillyTavern의 power_user.theme과 비교
+                const currentTheme = getCurrentTheme();
+                if (!conditionMet && currentTheme && currentTheme.toLowerCase() === themeId.toLowerCase()) {
+                    conditionMet = true;
+                    console.log(`[Font-Manager] SillyTavern 설정에서 테마 '${themeId}' 감지됨`);
+                }
+
+            } catch (error) {
+                console.error(`[Font-Manager] 테마 '${themeId}' 검사 중 오류:`, error);
+                continue;
+            }
+
+            if (conditionMet) {
+                matchedBinding = binding;
+                console.log(`[Font-Manager] 테마 연동 매칭됨: '${themeId}' -> 프리셋 '${binding.presetId}'`);
+                break;
+            }
+        }
+
+        // 매칭된 바인딩이 있으면 프리셋 적용
+        if (matchedBinding) {
+            applyPresetByTheme(matchedBinding.presetId);
+        }
+
+    } catch (error) {
+        console.error('[Font-Manager] 자동 프리셋 적용 체크 실패:', error);
     }
 }
 
@@ -146,9 +352,18 @@ function findThemeBinding(themeId) {
     return bindings.find(binding => binding.themeId === themeId);
 }
 
+// 마지막으로 자동 적용된 프리셋 추적 (중복 적용 방지)
+let lastAppliedPresetByAutoSwitch = null;
+
 // 테마에 연결된 프리셋 적용
 function applyPresetByTheme(presetId) {
     try {
+        // 중복 적용 방지
+        if (lastAppliedPresetByAutoSwitch === presetId) {
+            console.log(`[Font-Manager] 프리셋 '${presetId}'는 이미 적용되어 건너뜀`);
+            return;
+        }
+
         const presets = settings?.presets || [];
         const preset = presets.find(p => p.id === presetId);
         
@@ -158,10 +373,27 @@ function applyPresetByTheme(presetId) {
             
             // 폰트 적용
             if (preset.uiFont) {
-                applyTempUIFont(preset.uiFont);
+                const fonts = settings?.fonts || [];
+                const selectedFont = fonts.find(font => font.name === preset.uiFont);
+                if (selectedFont && selectedFont.fontFamily) {
+                    tempUiFont = selectedFont.fontFamily;
+                } else {
+                    tempUiFont = preset.uiFont;
+                }
+            } else {
+                tempUiFont = null;
             }
+            
             if (preset.messageFont) {
-                applyTempMessageFont(preset.messageFont);
+                const fonts = settings?.fonts || [];
+                const selectedFont = fonts.find(font => font.name === preset.messageFont);
+                if (selectedFont && selectedFont.fontFamily) {
+                    tempMessageFont = selectedFont.fontFamily;
+                } else {
+                    tempMessageFont = preset.messageFont;
+                }
+            } else {
+                tempMessageFont = null;
             }
             
             // 조절값들 적용
@@ -172,8 +404,23 @@ function applyPresetByTheme(presetId) {
             settings.chatFontWeight = preset.chatFontWeight ?? settings.chatFontWeight;
             settings.chatLineHeight = preset.chatLineHeight ?? settings.chatLineHeight;
             
+            // 마지막 적용 프리셋 기록
+            lastAppliedPresetByAutoSwitch = presetId;
+            
             saveSettingsDebounced();
             updateUIFont();
+            
+            console.log(`[Font-Manager] 테마 연동으로 프리셋 '${preset.name}' 자동 적용됨`);
+            
+            // 알림 표시 (옵션)
+            if (typeof toastr !== 'undefined') {
+                toastr.info(`테마 연동으로 폰트 프리셋 '${preset.name}'이(가) 자동 적용되었습니다.`, '폰트 자동 전환', {
+                    timeOut: 3000,
+                    positionClass: 'toast-top-center'
+                });
+            }
+        } else {
+            console.warn(`[Font-Manager] 프리셋 ID '${presetId}'를 찾을 수 없습니다.`);
         }
     } catch (error) {
         console.error('[Font-Manager] 테마 연결 프리셋 적용 실패:', error);
@@ -425,9 +672,31 @@ function renderPresetDropdown(template) {
 
 // 테마 연동 섹션 렌더링
 function renderThemeBindingSection(template) {
-    // 현재 테마 표시
-    const currentTheme = getCurrentTheme();
-    template.find('#current-theme-display').text(currentTheme || '감지 불가');
+    // 현재 테마 정보 수집 및 표시
+    const themeInfo = getDetectedThemeInfo();
+    const currentThemeDisplay = template.find('#current-theme-display');
+    
+    let displayText = themeInfo.sillyTavernTheme || '감지 불가';
+    
+    // 추가 감지된 정보가 있으면 표시
+    const additionalInfo = [];
+    if (themeInfo.detectedInStyles.length > 0) {
+        additionalInfo.push(`스타일: ${themeInfo.detectedInStyles.join(', ')}`);
+    }
+    if (themeInfo.detectedInHrefs.length > 0) {
+        const hrefs = themeInfo.detectedInHrefs.map(href => {
+            const parts = href.split('/');
+            return parts[parts.length - 1]; // 파일명만 표시
+        });
+        additionalInfo.push(`CSS파일: ${hrefs.join(', ')}`);
+    }
+    
+    if (additionalInfo.length > 0) {
+        displayText += ` (${additionalInfo.join(', ')})`;
+    }
+    
+    currentThemeDisplay.text(displayText);
+    currentThemeDisplay.attr('title', `상세 정보:\nSillyTavern 테마: ${themeInfo.sillyTavernTheme}\n감지된 스타일 키워드: ${themeInfo.detectedInStyles.join(', ') || '없음'}\n테마 관련 CSS 파일: ${themeInfo.detectedInHrefs.join(', ') || '없음'}\nBody 클래스: ${themeInfo.bodyClasses.join(', ') || '없음'}\nHTML 클래스: ${themeInfo.htmlClasses.join(', ') || '없음'}`);
     
     // 프리셋 드롭다운 채우기
     const presets = settings?.presets || [];
@@ -1287,6 +1556,13 @@ function setupEventListeners(template) {
     
     // 테마 바인딩 삭제 이벤트 설정
     setupThemeBindingEventListeners(template);
+    
+    // 테마 정보 새로고침 버튼
+    template.find('#refresh-theme-info-btn').off('click').on('click', function() {
+        renderThemeBindingSection(template);
+        debouncedCheckAndApplyAutoPreset(); // 테마 체크도 다시 실행
+        console.log('[Font-Manager] 테마 정보 새로고침됨');
+    });
 }
 
 // 테마 바인딩 이벤트 리스너 설정
@@ -1467,8 +1743,16 @@ jQuery(async () => {
     // SillyTavern 로드 완료 후 슬래시 커맨드 등록
     setTimeout(registerSlashCommands, 2000);
     
-    // 테마 변경 이벤트 리스너 설정
+    // 테마 변경 이벤트 리스너 설정 (3초 후)
     setTimeout(setupThemeChangeListener, 3000);
+    
+    // 초기 테마 체크 (5초 후 - 페이지 완전 로드 후)
+    setTimeout(() => {
+        if (settings?.themeBindings && settings.themeBindings.length > 0) {
+            console.log('[Font-Manager] 초기 테마 자동 적용 체크 시작');
+            debouncedCheckAndApplyAutoPreset();
+        }
+    }, 5000);
     
     console.log("Font-Manager 확장이 로드되었습니다.");
 }); 
