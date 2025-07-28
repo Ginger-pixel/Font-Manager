@@ -1037,11 +1037,29 @@ html body textarea:not(#send_textarea) {
 .menu_button,
 .menu_button *,
 .fa, .fas, .far, .fab,
-i[class*="fa-"] {
-  -webkit-text-stroke: initial !important;
-  font-weight: initial !important;
-  opacity: initial !important;
-  filter: initial !important;
+i[class*="fa-"],
+[class*="fa-"],
+.mes .fa,
+.mes .fas,
+.mes .far,
+.mes .fab,
+.mes i[class*="fa-"],
+.mes [class*="fa-"] {
+  -webkit-text-stroke: 0px transparent !important;
+  font-weight: 900 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  color: inherit !important;
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  text-rendering: auto !important;
+  line-height: 1 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+  white-space: nowrap !important;
+  direction: ltr !important;
 }
         `);
     } else {
@@ -1072,11 +1090,29 @@ html body textarea:not(#send_textarea) {
 .menu_button,
 .menu_button *,
 .fa, .fas, .far, .fab,
-i[class*="fa-"] {
-  -webkit-text-stroke: initial !important;
-  font-weight: initial !important;
-  opacity: initial !important;
-  filter: initial !important;
+i[class*="fa-"],
+[class*="fa-"],
+.mes .fa,
+.mes .fas,
+.mes .far,
+.mes .fab,
+.mes i[class*="fa-"],
+.mes [class*="fa-"] {
+  -webkit-text-stroke: 0px transparent !important;
+  font-weight: 900 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  color: inherit !important;
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font Awesome 5 Free", "Font Awesome 5 Pro", "FontAwesome" !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  text-rendering: auto !important;
+  line-height: 1 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+  white-space: nowrap !important;
+  direction: ltr !important;
 }
         `);
     }
