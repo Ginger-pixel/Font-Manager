@@ -441,25 +441,6 @@ html body textarea:not(#send_textarea) {
   line-height: 1.1rem !important;
   -webkit-text-stroke: var(--ui-font-weight) !important;
 }
-
-html *::before,
-html i {
-  font-family: "${actualFontFamily}", Sans-Serif, "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
-  filter: none !important;
-  text-shadow: none !important;
-}
-
-html body .drawer-content,
-html body textarea,
-html body .drawer-icon {
-  border: 0 !important;
-  color: var(--default-font-color) !important;
-}
-
-html body .interactable,
-html body .fa-solid {
-  transition: all 0.3s !important;
-}
         `);
     }
     
