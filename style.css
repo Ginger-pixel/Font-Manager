@@ -76,7 +76,8 @@
 .toggle-container {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 15px;
 }
 
 .toggle-label {
@@ -84,18 +85,60 @@
     font-size: calc(var(--mainFontSize) * 1.1);
     font-weight: 600;
     margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+}
+
+/* 토글 스위치 스타일 */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
     cursor: pointer;
 }
 
-.toggle-label input[type="checkbox"] {
-    margin: 0;
-    padding: 0;
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--black50a);
+    border: 1px solid var(--SmartThemeBorderColor);
+    transition: all 0.3s;
+    border-radius: 34px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--SmartThemeBodyColor);
+    transition: all 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .toggle-slider {
+    background-color: var(--SmartThemeQuoteColor);
+    border-color: var(--SmartThemeQuoteColor);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+    background-color: var(--SmartThemeBodyColor);
+}
+
+.toggle-slider:hover {
+    box-shadow: 0 0 8px rgba(var(--SmartThemeQuoteColorRGB), 0.3);
 }
 
 /* UI 폰트 섹션 */
