@@ -1,5 +1,12 @@
 /* Font-Manager 확장 스타일 - 폰트 관리 */
 
+/* 메인 컨테이너 */
+.font-manager-main-container {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
 /* 프리셋 드롭다운과 버튼 행 */
 .preset-selector-row {
     display: flex;
@@ -165,7 +172,8 @@
     padding: 15px;
     background-color: var(--black30a);
     overflow-y: auto;
-    min-height: 200px;
+    min-height: 150px;
+    max-height: 200px;
 }
 
 .font-list-title {
@@ -297,21 +305,25 @@
 }
 
 /* 스크롤바 스타일 */
-.font-list-area::-webkit-scrollbar {
+.font-list-area::-webkit-scrollbar,
+.font-manager-main-container::-webkit-scrollbar {
     width: 8px;
 }
 
-.font-list-area::-webkit-scrollbar-track {
+.font-list-area::-webkit-scrollbar-track,
+.font-manager-main-container::-webkit-scrollbar-track {
     background: var(--black30a);
     border-radius: 4px;
 }
 
-.font-list-area::-webkit-scrollbar-thumb {
+.font-list-area::-webkit-scrollbar-thumb,
+.font-manager-main-container::-webkit-scrollbar-thumb {
     background: var(--SmartThemeBorderColor);
     border-radius: 4px;
 }
 
-.font-list-area::-webkit-scrollbar-thumb:hover {
+.font-list-area::-webkit-scrollbar-thumb:hover,
+.font-manager-main-container::-webkit-scrollbar-thumb:hover {
     background: var(--SmartThemeQuoteColor);
 }
 
