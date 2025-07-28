@@ -89,6 +89,27 @@ function updateColorPreview(inputElement, previewElement) {
     }
 }
 
+// 컬러 피커와 텍스트 입력 동기화
+function syncColorInputs(template, hexColor, updatePicker = true, updateText = true) {
+    const colorPicker = template.find('#ui-font-color-picker');
+    const colorInput = template.find('#ui-font-color-input');
+    const colorPreview = template.find('#ui-font-color-preview');
+    
+    if (updatePicker) {
+        if (hexColor) {
+            colorPicker.val('#' + hexColor);
+        } else {
+            colorPicker.val('#ffffff'); // 기본값
+        }
+    }
+    
+    if (updateText) {
+        colorInput.val(hexColor || '');
+    }
+    
+    updateColorPreview(colorInput, colorPreview);
+}
+
 // 프리셋 이름 설정 팝업 표시
 async function showPresetNamePopup(existingName = '') {
     let success = false;
@@ -338,8 +359,7 @@ function renderUIFontSection(template) {
         template.find('#ui-font-size-value').text(uiFontSize + 'px');
         template.find('#ui-font-weight-slider').val(uiFontWeight);
         template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1) + 'px');
-        template.find('#ui-font-color-input').val(uiFontColor);
-        updateColorPreview(template.find('#ui-font-color-input'), template.find('#ui-font-color-preview'));
+        syncColorInputs(template, uiFontColor);
         
         // 임시 값 설정
         if (tempUiFontSize === null) {
@@ -361,8 +381,7 @@ function renderUIFontSection(template) {
         template.find('#ui-font-size-value').text(uiFontSize + 'px');
         template.find('#ui-font-weight-slider').val(uiFontWeight);
         template.find('#ui-font-weight-value').text(uiFontWeight.toFixed(1) + 'px');
-        template.find('#ui-font-color-input').val(uiFontColor);
-        updateColorPreview(template.find('#ui-font-color-input'), template.find('#ui-font-color-preview'));
+        syncColorInputs(template, uiFontColor);
     }
 }
 
@@ -1050,11 +1069,21 @@ function setupEventListeners(template) {
         applyTempUIFontWeight(weight);
     });
     
-    // UI 폰트 색상 입력 이벤트
+    // UI 폰트 컬러 피커 이벤트
+    template.find('#ui-font-color-picker').off('input').on('input', function() {
+        const hexColor = $(this).val().substring(1); // # 제거
+        syncColorInputs(template, hexColor, false, true); // 텍스트만 업데이트
+        applyTempUIFontColor(hexColor);
+    });
+    
+    // UI 폰트 색상 텍스트 입력 이벤트
     template.find('#ui-font-color-input').off('input').on('input', function() {
         const color = $(this).val().trim();
         updateColorPreview($(this), template.find('#ui-font-color-preview'));
         if (isValidHexColor(color)) {
+            if (color) {
+                template.find('#ui-font-color-picker').val('#' + color);
+            }
             applyTempUIFontColor(color);
         }
     });
