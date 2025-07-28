@@ -562,7 +562,7 @@ function renderThemeRulesList(template) {
 function renderFontAddArea(template) {
     const addAreaHtml = `
         <div class="font-add-section">
-            <h3>소스코드로 폰트 가져오기</h3>
+            <h3>폰트 가져오기</h3>
             <textarea id="font-source-textarea" class="font-source-textarea" placeholder="여기에 폰트의 소스코드를 넣으세요&#10;&#10;예시:&#10;@font-face {&#10;  font-family: 'MyCustomFont';&#10;  src: url('https://example.com/font.woff2') format('woff2');&#10;}"></textarea>
             <button id="import-font-btn" class="import-font-btn">가져오기</button>
         </div>
