@@ -334,6 +334,50 @@ function extractFontFamilyFromCSS(css) {
     return null;
 }
 
+// 폰트 로드 상태 확인
+function checkFontLoad(fontFamily) {
+    console.log(`[Font-Manager] 폰트 로드 상태 확인: ${fontFamily}`);
+    
+    if (!document.fonts) {
+        console.warn('[Font-Manager] document.fonts API를 지원하지 않는 브라우저');
+        return;
+    }
+    
+    // 폰트 로드 확인
+    document.fonts.ready.then(() => {
+        const fontFace = Array.from(document.fonts).find(font => 
+            font.family === fontFamily || font.family === `"${fontFamily}"` || font.family === `'${fontFamily}'`
+        );
+        
+        if (fontFace) {
+            console.log(`[Font-Manager] ✅ 폰트 발견: ${fontFace.family}, 상태: ${fontFace.status}`);
+            
+            if (fontFace.status === 'loaded') {
+                console.log(`[Font-Manager] ✅ 폰트 로드 완료: ${fontFamily}`);
+            } else if (fontFace.status === 'loading') {
+                console.log(`[Font-Manager] ⏳ 폰트 로딩 중: ${fontFamily}`);
+                fontFace.loaded.then(() => {
+                    console.log(`[Font-Manager] ✅ 폰트 로드 완료: ${fontFamily}`);
+                }).catch(error => {
+                    console.error(`[Font-Manager] ❌ 폰트 로드 실패: ${fontFamily}`, error);
+                });
+            } else if (fontFace.status === 'unloaded') {
+                console.log(`[Font-Manager] ⏳ 폰트 아직 로드되지 않음: ${fontFamily}`);
+                fontFace.load().then(() => {
+                    console.log(`[Font-Manager] ✅ 폰트 강제 로드 완료: ${fontFamily}`);
+                }).catch(error => {
+                    console.error(`[Font-Manager] ❌ 폰트 강제 로드 실패: ${fontFamily}`, error);
+                });
+            } else {
+                console.warn(`[Font-Manager] ❓ 폰트 상태 불명: ${fontFamily}, 상태: ${fontFace.status}`);
+            }
+        } else {
+            console.warn(`[Font-Manager] ❌ 폰트를 찾을 수 없음: ${fontFamily}`);
+            console.log('[Font-Manager] 사용 가능한 폰트들:', Array.from(document.fonts).map(f => f.family));
+        }
+    });
+}
+
 // CSS 검증 및 정리
 const sanitize = (css) => {
     if (!css) return '';
@@ -367,7 +411,8 @@ function updateUIFont() {
     if (!fontStyle) {
         fontStyle = document.createElement('style');
         fontStyle.id = 'font-manager--ui-fonts';
-        document.head.append(fontStyle);
+        // CSS 우선순위를 위해 head의 맨 마지막에 추가
+        document.head.appendChild(fontStyle);
         console.log('[Font-Manager] 새 스타일 태그 생성:', fontStyle);
     }
     
@@ -404,37 +449,37 @@ function updateUIFont() {
     if (currentFontName && actualFontFamily) {
         console.log(`[Font-Manager] UI 폰트 CSS 생성: ${actualFontFamily}`);
         uiFontCss.push(`
-/* UI FONT APPLICATION */
-body,
-input,
-select,
-span,
-code,
-.list-group-item,
-.ui-widget-content .ui-menu-item-wrapper,
-textarea:not(#send_textarea) {
-  font-family: "${actualFontFamily}", var(--ui-default-font), Sans-Serif !important;
+/* UI FONT APPLICATION - Font Manager Override */
+html body,
+html body input,
+html body select,
+html body span,
+html body code,
+html body .list-group-item,
+html body .ui-widget-content .ui-menu-item-wrapper,
+html body textarea:not(#send_textarea) {
+  font-family: "${actualFontFamily}", Sans-Serif !important;
   font-weight: normal !important;
-  line-height: 1.1rem;
-  -webkit-text-stroke: var(--ui-font-weight);
+  line-height: 1.1rem !important;
+  -webkit-text-stroke: var(--ui-font-weight) !important;
 }
 
-*::before,
-i {
+html *::before,
+html i {
   font-family: "${actualFontFamily}", Sans-Serif, "Font Awesome 6 Free", "Font Awesome 6 Brands" !important;
   filter: none !important;
   text-shadow: none !important;
 }
 
-.drawer-content,
-textarea,
-.drawer-icon {
-  border: 0;
+html body .drawer-content,
+html body textarea,
+html body .drawer-icon {
+  border: 0 !important;
   color: var(--default-font-color) !important;
 }
 
-.interactable,
-.fa-solid {
+html body .interactable,
+html body .fa-solid {
   transition: all 0.3s !important;
 }
         `);
@@ -459,6 +504,11 @@ textarea,
     
     fontStyle.innerHTML = sanitizedCss;
     console.log('[Font-Manager] 스타일 태그에 CSS 적용 완료');
+    
+    // 폰트 로드 상태 확인
+    if (actualFontFamily && currentFontName) {
+        checkFontLoad(actualFontFamily);
+    }
 }
 
 // 현재 프리셋의 UI 폰트 가져오기
